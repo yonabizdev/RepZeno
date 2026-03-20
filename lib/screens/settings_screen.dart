@@ -1,0 +1,287 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
+import '../theme/app_theme.dart';
+import '../widgets/app_backdrop.dart';
+import '../database/database_helper.dart';
+import '../providers/repository_providers.dart';
+import '../providers/workout_provider.dart';
+import '../providers/exercise_provider.dart';
+
+class SettingsScreen extends ConsumerWidget {
+  const SettingsScreen({super.key});
+
+  Future<void> _exportDatabase(BuildContext context) async {
+    if (kIsWeb) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
+      return;
+    }
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      final dbPath = join(docsDir.path, 'repzeno.db');
+      final file = File(dbPath);
+      
+      if (await file.exists()) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: 'application/x-sqlite3')],
+            text: 'RepZeno Database Backup',
+          ),
+        );
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No database found to export.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _importDatabase(BuildContext context, WidgetRef ref) async {
+    if (kIsWeb) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
+      return;
+    }
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        
+        if (!filePath.endsWith('.db') && !filePath.endsWith('.sqlite')) {
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid file type. Please select a .db or .sqlite backup file.')));
+          return;
+        }
+
+        // Validate structure by attempting to open it
+        try {
+          // Import sqflite dynamically to test DB
+          final testDb = await openDatabase(filePath, readOnly: true);
+          final tables = await testDb.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+          final tableNames = tables.map((e) => e['name'] as String).toList();
+          await testDb.close();
+          
+          if (!tableNames.contains('exercises') || !tableNames.contains('workouts')) {
+             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid database structure. Not a RepZeno backup file.')));
+             return;
+          }
+        } catch (e) {
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Corrupt or invalid database file.')));
+          return;
+        }
+
+        final importedFile = File(filePath);
+        final docsDir = await getApplicationDocumentsDirectory();
+        final dbPath = join(docsDir.path, 'repzeno.db');
+        
+        // Safely close existing connection before overwriting
+        await DatabaseHelper.instance.closeAndReset();
+        await importedFile.copy(dbPath);
+        
+        // Force Riverpod to dump cached memory and pull fresh from the new DB
+        ref.invalidate(workoutRepositoryProvider);
+        ref.invalidate(exerciseRepositoryProvider);
+        ref.invalidate(allWorkoutsProvider);
+        ref.invalidate(workoutByDateProvider);
+        ref.invalidate(muscleGroupsProvider);
+        
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppTheme.surface,
+              title: const Text('Import Successful'),
+              content: const Text('Database restored! Your data has been instantly refreshed.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    context.go('/');
+                  },
+                  child: const Text('OK', style: TextStyle(color: AppTheme.primary)),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Import failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAllData(BuildContext context, WidgetRef ref) async {
+    if (kIsWeb) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not supported on Web.')));
+      return;
+    }
+    
+    // Safely close the active connection first
+    await DatabaseHelper.instance.closeAndReset();
+    
+    final docsDir = await getApplicationDocumentsDirectory();
+    final dbPath = join(docsDir.path, 'repzeno.db');
+    final file = File(dbPath);
+    if (await file.exists()) {
+      await file.delete();
+      
+      // Force Riverpod to clear UI caches
+      ref.invalidate(workoutRepositoryProvider);
+      ref.invalidate(exerciseRepositoryProvider);
+      ref.invalidate(allWorkoutsProvider);
+      ref.invalidate(workoutByDateProvider);
+      
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.surface,
+            title: const Text('Data Deleted'),
+            content: const Text('All your data has been permanently wiped and your session has been reset.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.go('/');
+                },
+                child: const Text('OK', style: TextStyle(color: Colors.redAccent)),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final topContentInset = MediaQuery.paddingOf(context).top + kToolbarHeight + 12;
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: const Text('Settings')),
+      body: AppBackdrop(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
+          children: [
+            _SettingsSection(
+              title: 'Data & Backups',
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
+                  title: const Text('Export Backup'),
+                  subtitle: const Text('Save your workout history as a file.'),
+                  onTap: () => _exportDatabase(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
+                  title: const Text('Import Backup'),
+                  subtitle: const Text('Restore from a previously saved file.'),
+                  onTap: () => _importDatabase(context, ref),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined, color: AppTheme.primary),
+                  title: const Text('Privacy & Data'),
+                  subtitle: const Text('Learn how RepZeno protects you.'),
+                  onTap: () => context.push('/privacy'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _SettingsSection(
+              title: 'Danger Zone',
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+                  title: const Text('Delete All Data', style: TextStyle(color: Colors.redAccent)),
+                  subtitle: const Text('Permanently wipe all workouts and exercises.'),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: AppTheme.surface,
+                        title: const Text('Delete All Data?'),
+                        content: const Text('This action cannot be undone. Are you absolutely sure?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _deleteAllData(context, ref);
+                            },
+                            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SettingsSection({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 12, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.outline),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+}
