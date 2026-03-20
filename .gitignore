@@ -46,3 +46,8 @@ app.*.map.json
 /android/key.properties
 *.jks
 *.keystore
+
+# Distribution output
+/dist/
+*.apk
+*.aab
