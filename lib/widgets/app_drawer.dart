@@ -12,9 +12,10 @@ class AppDrawer extends StatelessWidget {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: CustomScrollView(
+            slivers: [
+              SliverList.list(
+                children: [
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -94,8 +95,15 @@ class AppDrawer extends StatelessWidget {
                   context.push('/settings');
                 },
               ),
-              const Spacer(),
-              Container(
+                ],
+              ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const SizedBox(height: 16),
+                    Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -106,6 +114,9 @@ class AppDrawer extends StatelessWidget {
                 child: const Text(
                   'Stay consistent. Small workouts still count.',
                   style: TextStyle(color: AppTheme.textMuted, height: 1.4),
+                ),
+              ),
+                  ],
                 ),
               ),
             ],

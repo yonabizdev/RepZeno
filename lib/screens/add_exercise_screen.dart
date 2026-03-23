@@ -284,7 +284,8 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
 
                   final canSave = name.trim().isNotEmpty && !isSaving;
 
-                  return Column(
+                  return SingleChildScrollView(
+                    child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -483,7 +484,8 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                           ),
                         ],
                       ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),

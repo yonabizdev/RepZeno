@@ -291,7 +291,7 @@ class _ExerciseManagementScreenState
           builder: (context) => AlertDialog(
             title: const Text('Delete exercise?'),
             content: Text(
-              'Delete "${exercise.name}" from your exercise library? It will be removed from future exercise pickers, while logged workout history stays intact.',
+              'Delete "${exercise.name}" from your exercise library? It will be removed from future exercise pickers.',
             ),
             actions: [
               TextButton(

@@ -199,6 +199,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         availableCalendarFormats: const {
                           CalendarFormat.month: 'Month',
                         },
+                        availableGestures: AvailableGestures.horizontalSwipe,
                         selectedDayPredicate: (day) =>
                             isSameDay(_selectedDay, day),
                         onDaySelected: (selectedDay, focusedDay) {
