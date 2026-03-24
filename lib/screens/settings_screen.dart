@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path/path.dart';
+import 'package:intl/intl.dart';
+import 'package:path/path.dart' hide context;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
@@ -14,13 +15,21 @@ import '../database/database_helper.dart';
 import '../providers/repository_providers.dart';
 import '../providers/workout_provider.dart';
 import '../providers/exercise_provider.dart';
+import '../providers/settings_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _exportDatabase(BuildContext context) async {
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool _isImporting = false;
+
+  Future<void> _exportDatabase() async {
     if (kIsWeb) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
       return;
     }
     try {
@@ -29,21 +38,26 @@ class SettingsScreen extends ConsumerWidget {
       final file = File(dbPath);
       
       if (await file.exists()) {
+        final timestamp = DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now());
+        final tempDir = await getTemporaryDirectory();
+        final backupFileName = 'RepZeno_Backup_$timestamp.db';
+        final tempBackupFile = await file.copy(join(tempDir.path, backupFileName));
+        
         await SharePlus.instance.share(
           ShareParams(
-            files: [XFile(file.path, mimeType: 'application/x-sqlite3')],
+            files: [XFile(tempBackupFile.path, mimeType: 'application/x-sqlite3')],
             text: 'RepZeno Database Backup',
           ),
         );
       } else {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No database found to export.')),
           );
         }
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
@@ -51,18 +65,29 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _importDatabase(BuildContext context, WidgetRef ref) async {
+  Future<void> _importDatabase() async {
     if (kIsWeb) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
       return;
     }
+    
+    if (_isImporting) return;
+    setState(() => _isImporting = true);
+    
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      // Clear temp files to prevent deadlocks from previous failed picks (especially from cloud providers)
+      await FilePicker.platform.clearTemporaryFiles().catchError((_) => false);
+      
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['db'],
+      );
+      
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
         
-        if (!filePath.endsWith('.db') && !filePath.endsWith('.sqlite')) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid file type. Please select a .db or .sqlite backup file.')));
+        if (!filePath.endsWith('.db')) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid file type. Please select a .db backup file.')));
           return;
         }
 
@@ -75,11 +100,11 @@ class SettingsScreen extends ConsumerWidget {
           await testDb.close();
           
           if (!tableNames.contains('exercises') || !tableNames.contains('workouts')) {
-             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid database structure. Not a RepZeno backup file.')));
+             if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid database structure. Not a RepZeno backup file.')));
              return;
           }
         } catch (e) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Corrupt or invalid database file.')));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Corrupt or invalid database file.')));
           return;
         }
 
@@ -98,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
         ref.invalidate(workoutByDateProvider);
         ref.invalidate(muscleGroupsProvider);
         
-        if (context.mounted) {
+        if (mounted) {
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -120,17 +145,21 @@ class SettingsScreen extends ConsumerWidget {
         }
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Import failed: $e')),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
     }
   }
 
-  Future<void> _deleteAllData(BuildContext context, WidgetRef ref) async {
+  Future<void> _deleteAllData() async {
     if (kIsWeb) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not supported on Web.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not supported on Web.')));
       return;
     }
     
@@ -149,7 +178,7 @@ class SettingsScreen extends ConsumerWidget {
       ref.invalidate(allWorkoutsProvider);
       ref.invalidate(workoutByDateProvider);
       
-      if (context.mounted) {
+      if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -173,7 +202,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final topContentInset = MediaQuery.paddingOf(context).top + kToolbarHeight + 12;
 
     return Scaffold(
@@ -184,19 +213,36 @@ class SettingsScreen extends ConsumerWidget {
           padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
           children: [
             _SettingsSection(
+              title: 'Preferences',
+              children: [
+                Consumer(
+                  builder: (context, ref, child) {
+                    final isAscending = ref.watch(sortSetsAscendingProvider);
+                    return ListTile(
+                      leading: const Icon(Icons.sort_rounded, color: AppTheme.primary),
+                      title: const Text('Set Sort Order'),
+                      subtitle: Text(isAscending ? 'Oldest sets first' : 'Newest sets first'),
+                      onTap: () => ref.read(sortSetsAscendingProvider.notifier).toggle(),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _SettingsSection(
               title: 'Data & Backups',
               children: [
                 ListTile(
                   leading: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
                   title: const Text('Export Backup'),
                   subtitle: const Text('Save your workout history as a file.'),
-                  onTap: () => _exportDatabase(context),
+                  onTap: () => _exportDatabase(),
                 ),
                 ListTile(
                   leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
                   title: const Text('Import Backup'),
                   subtitle: const Text('Restore from a previously saved file.'),
-                  onTap: () => _importDatabase(context, ref),
+                  onTap: () => _importDatabase(),
                 ),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined, color: AppTheme.primary),
@@ -229,7 +275,7 @@ class SettingsScreen extends ConsumerWidget {
                           TextButton(
                             onPressed: () {
                               Navigator.pop(ctx);
-                              _deleteAllData(context, ref);
+                              _deleteAllData();
                             },
                             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
                           ),

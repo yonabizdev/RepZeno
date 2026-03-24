@@ -4,15 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/router.dart';
-import 'theme/app_theme.dart';
+import 'theme/app_theme.dart';import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/settings_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  runApp(const ProviderScope(child: RepZenoApp()));
+  
+  final prefs = await SharedPreferences.getInstance();
+  
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const RepZenoApp(),
+    ),
+  );
 }
 
 class RepZenoApp extends StatelessWidget {

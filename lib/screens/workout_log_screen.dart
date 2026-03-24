@@ -11,6 +11,7 @@ import '../models/workout_set.dart';
 import '../providers/exercise_provider.dart';
 import '../providers/repository_providers.dart';
 import '../providers/workout_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 
@@ -165,6 +166,15 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
 
     return exercisesAsync.when(
       data: (exercises) {
+        int totalSets = 0;
+        for (final ex in exercises) {
+          final count = ref.watch(workoutSetsProvider(ex.id!)).maybeWhen(
+            data: (sets) => sets.length,
+            orElse: () => 0,
+          );
+          totalSets += count;
+        }
+
         return ListView(
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
@@ -184,6 +194,7 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
             _WorkoutHeader(
               dateLabel: titleDate,
               exerciseCount: exercises.length,
+              setCount: totalSets,
             ),
             const SizedBox(height: 16),
             Center(
@@ -226,8 +237,13 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
 class _WorkoutHeader extends StatelessWidget {
   final String dateLabel;
   final int? exerciseCount;
+  final int setCount;
 
-  const _WorkoutHeader({required this.dateLabel, required this.exerciseCount});
+  const _WorkoutHeader({
+    required this.dateLabel,
+    required this.exerciseCount,
+    this.setCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -263,16 +279,18 @@ class _WorkoutHeader extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _WorkoutBadge(
-                icon: Icons.fitness_center_rounded,
-                label: exerciseCount == null
-                    ? 'Ready to start'
-                    : '$exerciseCount exercises',
-              ),
-              const _WorkoutBadge(
-                icon: Icons.insights_rounded,
-                label: 'Track sets + progress',
-              ),
+              if (exerciseCount == null || exerciseCount == 0)
+                const _WorkoutBadge(
+                  icon: Icons.fitness_center_rounded,
+                  label: 'Ready to start',
+                )
+              else
+                _WorkoutBadge(
+                  icon: Icons.fitness_center_rounded,
+                  label: '$exerciseCount Exercises',
+                  secondaryIcon: Icons.local_fire_department_rounded,
+                  secondaryLabel: '$setCount Sets',
+                ),
             ],
           ),
         ],
@@ -284,13 +302,20 @@ class _WorkoutHeader extends StatelessWidget {
 class _WorkoutBadge extends StatelessWidget {
   final IconData icon;
   final String label;
+  final IconData? secondaryIcon;
+  final String? secondaryLabel;
 
-  const _WorkoutBadge({required this.icon, required this.label});
+  const _WorkoutBadge({
+    required this.icon,
+    required this.label,
+    this.secondaryIcon,
+    this.secondaryLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppTheme.surfaceElevated.withValues(alpha: 0.86),
         borderRadius: BorderRadius.circular(18),
@@ -300,8 +325,26 @@ class _WorkoutBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: AppTheme.secondary),
-          const SizedBox(width: 8),
-          Text(label),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (secondaryIcon != null && secondaryLabel != null) ...[
+            const SizedBox(width: 16),
+            Icon(secondaryIcon, size: 16, color: AppTheme.secondary),
+            const SizedBox(width: 6),
+            Text(
+              secondaryLabel!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -724,7 +767,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
           ),
           const SizedBox(height: 18),
           isDuration
-              ? const Row(
+              ? Row(
                   children: [
                     SizedBox(
                       width: 40,
@@ -744,7 +787,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                   ],
                 )
               : isRepsOnly
-              ? const Row(
+              ? Row(
                   children: [
                     SizedBox(
                       width: 40,
@@ -763,7 +806,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                     SizedBox(width: 44),
                   ],
                 )
-              : const Row(
+              : Row(
                   children: [
                     SizedBox(
                       width: 40,
@@ -793,9 +836,30 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
           setsAsync.when(
             data: (sets) {
               final visibleSets = _visibleSets(sets);
+              final isAscending = ref.watch(sortSetsAscendingProvider);
+              final displayIndices = isAscending
+                  ? List.generate(visibleSets.length, (i) => i)
+                  : List.generate(visibleSets.length, (i) => i).reversed.toList();
+
+              final addSetRow = isDuration
+                  ? _AddDurationSetRow(
+                      workoutExerciseId: widget.workoutExercise.id!,
+                      nextSetIndex: visibleSets.length + 1,
+                    )
+                  : isRepsOnly
+                  ? _AddRepsSetRow(
+                      workoutExerciseId: widget.workoutExercise.id!,
+                      nextSetIndex: visibleSets.length + 1,
+                    )
+                  : _AddSetRow(
+                      workoutExerciseId: widget.workoutExercise.id!,
+                      nextSetIndex: visibleSets.length + 1,
+                    );
+
               return Column(
                 children: [
-                  for (int i = 0; i < visibleSets.length; i++)
+                  if (!isAscending) addSetRow,
+                  for (final i in displayIndices)
                     isDuration
                         ? _DurationSetRow(
                             setIndex: i + 1,
@@ -828,20 +892,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                               visibleSets,
                             ),
                           ),
-                  isDuration
-                      ? _AddDurationSetRow(
-                          workoutExerciseId: widget.workoutExercise.id!,
-                          nextSetIndex: visibleSets.length + 1,
-                        )
-                      : isRepsOnly
-                      ? _AddRepsSetRow(
-                          workoutExerciseId: widget.workoutExercise.id!,
-                          nextSetIndex: visibleSets.length + 1,
-                        )
-                      : _AddSetRow(
-                          workoutExerciseId: widget.workoutExercise.id!,
-                          nextSetIndex: visibleSets.length + 1,
-                        ),
+                  if (isAscending) addSetRow,
                 ],
               );
             },

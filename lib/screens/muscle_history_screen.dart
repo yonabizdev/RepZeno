@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/muscle_group.dart';
 import '../providers/exercise_provider.dart';
 import '../providers/workout_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/selection_sheet.dart';
@@ -56,6 +57,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
     final historyAsync = ref.watch(
       muscleHistoryProvider(_selectedMuscleGroupId),
     );
+    final isAscending = ref.watch(sortSetsAscendingProvider);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -74,7 +76,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
             ),
             Expanded(
               child: historyAsync.when(
-                data: (history) => _buildHistoryContent(history),
+                data: (history) => _buildHistoryContent(history, isAscending: isAscending),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, st) => Center(child: Text('Error: $e')),
               ),
@@ -136,7 +138,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryContent(List<Map<String, dynamic>> history) {
+  Widget _buildHistoryContent(List<Map<String, dynamic>> history, {required bool isAscending}) {
     if (history.isEmpty) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -290,7 +292,8 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      ...List.generate(sets.length, (setIndex) {
+                      ...List.generate(sets.length, (index) {
+                        final setIndex = isAscending ? index : sets.length - 1 - index;
                         final set = sets[setIndex];
                         final trackingType =
                             (set['tracking_type'] as String?) ?? 'weight_reps';
