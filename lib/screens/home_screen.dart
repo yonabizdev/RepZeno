@@ -8,6 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/workout.dart';
+import '../providers/exercise_provider.dart';
+import '../providers/profile_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
@@ -132,12 +135,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final completedDayCount = workoutCountByDate.length;
     final todayKey = _dateKey(DateTime.now());
 
+    final profileAsync = ref.watch(userProfileProvider);
+    String greeting = 'RepZeno';
+    profileAsync.whenData((profile) {
+      if (profile?.name != null && profile!.name!.isNotEmpty) {
+        final firstName = profile.name!.split(' ').first;
+        greeting = 'Hi, $firstName!';
+      }
+    });
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
-          'RepZeno',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        title: Text(
+          greeting,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
       ),
       drawer: const AppDrawer(),

@@ -6,6 +6,8 @@ import '../screens/muscle_history_screen.dart';
 import '../screens/exercise_management_screen.dart';
 import '../screens/privacy_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/bodyweight_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -50,6 +52,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/bodyweight',
+      builder: (context, state) => const BodyweightScreen(),
     ),
   ],
 );

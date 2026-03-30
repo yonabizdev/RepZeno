@@ -1626,7 +1626,7 @@ Future<bool> _showDeleteConfirmation(
           title: Text(title),
           content: Text(message),
           actions: [
-            TextButton(
+            OutlinedButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text('Cancel'),
             ),

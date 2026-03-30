@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/profile_provider.dart';
 import '../theme/app_theme.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(userProfileProvider);
+    String drawerName = 'RepZeno';
+    profileAsync.whenData((profile) {
+      if (profile?.name != null && profile!.name!.isNotEmpty) {
+        drawerName = profile.name!;
+      }
+    });
+
     return Drawer(
       child: SafeArea(
         child: Padding(
@@ -40,13 +50,13 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'RepZeno',
-                            style: TextStyle(
+                            drawerName,
+                            style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
@@ -85,6 +95,22 @@ class AppDrawer extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   context.push('/manage-exercises');
+                },
+              ),
+              _DrawerTile(
+                icon: Icons.monitor_weight_outlined,
+                label: 'Bodyweight Tracker',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/bodyweight');
+                },
+              ),
+              _DrawerTile(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/profile');
                 },
               ),
               _DrawerTile(

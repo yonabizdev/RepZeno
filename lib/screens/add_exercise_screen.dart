@@ -462,7 +462,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: TextButton(
+                            child: OutlinedButton(
                               onPressed: isSaving
                                   ? null
                                   : () {

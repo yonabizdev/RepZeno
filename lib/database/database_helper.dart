@@ -9,7 +9,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const _dbVersion = 6;
+  static const _dbVersion = 7;
   static const _storageProtectionChannel = MethodChannel(
     'com.repzeno.repzeno/storage',
   );
@@ -239,6 +239,22 @@ class DatabaseHelper {
         FOREIGN KEY (workoutExerciseId) REFERENCES workout_exercises (id) ON DELETE CASCADE
       )
     ''');
+    await db.execute('''
+      CREATE TABLE user_profile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        height REAL,
+        gender TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE weight_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        weight REAL NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
 
     await _seedDatabase(db);
   }
@@ -346,6 +362,25 @@ class DatabaseHelper {
       ''');
 
       await _syncDefaultExercises(db, muscleGroupIds);
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE user_profile (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          height REAL,
+          gender TEXT
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE weight_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          weight REAL NOT NULL,
+          createdAt TEXT NOT NULL
+        )
+      ''');
     }
   }
 

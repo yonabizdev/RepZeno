@@ -294,7 +294,7 @@ class _ExerciseManagementScreenState
               'Delete "${exercise.name}" from your exercise library? It will be removed from future exercise pickers.',
             ),
             actions: [
-              TextButton(
+              OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancel'),
               ),
@@ -673,7 +673,7 @@ class _ExerciseManagementScreenState
                       Row(
                         children: [
                           Expanded(
-                            child: TextButton(
+                            child: OutlinedButton(
                               onPressed: isSaving
                                   ? null
                                   : () {
