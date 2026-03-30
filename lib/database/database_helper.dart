@@ -9,7 +9,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const _dbVersion = 7;
+  static const _dbVersion = 8;
   static const _storageProtectionChannel = MethodChannel(
     'com.repzeno.repzeno/storage',
   );
@@ -244,7 +244,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         height REAL,
-        gender TEXT
+        gender TEXT,
+        dateOfBirth TEXT
       )
     ''');
     await db.execute('''
@@ -381,6 +382,10 @@ class DatabaseHelper {
           createdAt TEXT NOT NULL
         )
       ''');
+    }
+
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE user_profile ADD COLUMN dateOfBirth TEXT');
     }
   }
 
@@ -525,7 +530,7 @@ class DatabaseHelper {
         bool localHasData = false;
         if (localProfile.isNotEmpty) {
           final lProf = localProfile.first;
-          if (lProf['name'] != null || lProf['height'] != null || lProf['gender'] != null) {
+          if (lProf['name'] != null || lProf['height'] != null || lProf['gender'] != null || lProf['dateOfBirth'] != null) {
             localHasData = true;
           }
         }
@@ -535,6 +540,7 @@ class DatabaseHelper {
             'name': iProf['name'],
             'height': iProf['height'],
             'gender': iProf['gender'],
+            'dateOfBirth': iProf['dateOfBirth'],
           };
           if (localProfile.isEmpty) {
             await db.insert('user_profile', values);

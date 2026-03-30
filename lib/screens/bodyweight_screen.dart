@@ -37,6 +37,15 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
     }
 
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final currentLogs = ref.read(weightLogsProvider).value ?? [];
+    
+    if (currentLogs.any((l) => l.date.startsWith(dateStr))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A weight log already exists for this date. Please edit or delete it instead.')),
+      );
+      return;
+    }
+
     final log = WeightLog(
       date: dateStr,
       weight: weight,
@@ -186,9 +195,21 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
                             return;
                           }
 
+                          final newDateStr = DateFormat('yyyy-MM-dd').format(editDate);
+                          final currentLogs = ref.read(weightLogsProvider).value ?? [];
+                          
+                          if (currentLogs.any((l) => l.id != log.id && l.date.startsWith(newDateStr))) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Another weight log already exists for this date.')),
+                              );
+                            }
+                            return;
+                          }
+
                           final updatedLog = WeightLog(
                             id: log.id,
-                            date: DateFormat('yyyy-MM-dd').format(editDate),
+                            date: newDateStr,
                             weight: updatedWeight,
                             createdAt: log.createdAt,
                           );

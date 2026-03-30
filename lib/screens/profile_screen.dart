@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
 import '../models/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../theme/app_theme.dart';
@@ -18,6 +20,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameController = TextEditingController();
   final _ftController = TextEditingController();
   final _inController = TextEditingController();
+  final _dobController = TextEditingController();
   String? _selectedGender;
   bool _isLoading = true;
 
@@ -26,6 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _nameController.dispose();
     _ftController.dispose();
     _inController.dispose();
+    _dobController.dispose();
     super.dispose();
   }
 
@@ -41,6 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _inController.text = inches.toString();
       }
       _selectedGender = profile.gender;
+      _dobController.text = profile.dateOfBirth ?? '';
       _isLoading = false;
     }
   }
@@ -62,10 +67,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
 
+    final dobString = _dobController.text.trim();
+
     final profile = UserProfile(
       name: name.isEmpty ? null : name,
       height: customHeight,
       gender: _selectedGender,
+      dateOfBirth: dobString.isEmpty ? null : dobString,
     );
 
     await ref.read(userProfileProvider.notifier).saveProfile(profile);
@@ -75,6 +83,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile saved successfully!')),
       );
+    }
+  }
+
+  Future<void> _selectDateOfBirth() async {
+    final initialDate = _dobController.text.isNotEmpty 
+      ? DateTime.tryParse(_dobController.text) ?? DateTime.now() 
+      : DateTime.now().subtract(const Duration(days: 365 * 25)); // Default to ~25 years old
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+         return Theme(
+           data: Theme.of(context).copyWith(
+             colorScheme: const ColorScheme.dark(
+               primary: AppTheme.primary,
+               surface: AppTheme.surfaceElevated,
+               onPrimary: Colors.white,
+               onSurface: Colors.white,
+             ),
+           ),
+           child: child!,
+         );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+      });
     }
   }
 
@@ -209,6 +248,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             _selectedGender = val;
                           });
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _dobController,
+                        readOnly: true,
+                        onTap: _selectDateOfBirth,
+                        decoration: InputDecoration(
+                          labelText: 'Date of Birth',
+                          prefixIcon: const Icon(Icons.cake),
+                          filled: true,
+                          fillColor: AppTheme.surfaceMuted.withValues(alpha: 0.5),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 32),
                       ElevatedButton(

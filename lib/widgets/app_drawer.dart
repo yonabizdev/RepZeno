@@ -97,6 +97,18 @@ class AppDrawer extends ConsumerWidget {
                   context.push('/manage-exercises');
                 },
               ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Divider(color: AppTheme.outline, height: 1),
+              ),
+              _DrawerTile(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/profile');
+                },
+              ),
               _DrawerTile(
                 icon: Icons.monitor_weight_outlined,
                 label: 'Bodyweight Tracker',
@@ -106,12 +118,16 @@ class AppDrawer extends ConsumerWidget {
                 },
               ),
               _DrawerTile(
-                icon: Icons.person_outline_rounded,
-                label: 'Profile',
+                icon: Icons.monitor_heart_outlined,
+                label: 'Health Reports',
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/profile');
+                  context.push('/reports');
                 },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Divider(color: AppTheme.outline, height: 1),
               ),
               _DrawerTile(
                 icon: Icons.settings_rounded,
