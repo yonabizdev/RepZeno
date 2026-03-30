@@ -16,26 +16,29 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameController = TextEditingController();
-  final _cmController = TextEditingController();
-  final _inchController = TextEditingController();
+  final _ftController = TextEditingController();
+  final _inController = TextEditingController();
   String? _selectedGender;
   bool _isLoading = true;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _cmController.dispose();
-    _inchController.dispose();
+    _ftController.dispose();
+    _inController.dispose();
     super.dispose();
   }
 
   void _populateProfile(UserProfile profile) {
     if (_isLoading) {
       _nameController.text = profile.name ?? '';
-      if (profile.height != null) {
-        // Show cm by default if user hasn't explicitly chosen inches prior
-        _cmController.text = profile.height.toString();
-        _inchController.text = '';
+      if (profile.height != null && profile.height! > 0) {
+        final totalInches = profile.height! / 2.54;
+        final feet = (totalInches / 12).floor();
+        final inches = (totalInches % 12).round();
+        
+        _ftController.text = feet > 0 ? feet.toString() : '';
+        _inController.text = inches.toString();
       }
       _selectedGender = profile.gender;
       _isLoading = false;
@@ -46,13 +49,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final name = _nameController.text.trim();
     
     double? customHeight;
-    if (_inchController.text.trim().isNotEmpty && _cmController.text.trim().isEmpty) { // prioritize inch if specified alone
-      final inches = double.tryParse(_inchController.text.trim());
-      if (inches != null) {
-        customHeight = num.parse((inches * 2.54).toStringAsFixed(1)).toDouble();
+    final ftString = _ftController.text.trim();
+    final inString = _inController.text.trim();
+    
+    if (ftString.isNotEmpty || inString.isNotEmpty) {
+      final feet = double.tryParse(ftString) ?? 0;
+      final inches = double.tryParse(inString) ?? 0;
+      
+      final totalInches = (feet * 12) + inches;
+      if (totalInches > 0) {
+        customHeight = num.parse((totalInches * 2.54).toStringAsFixed(1)).toDouble();
       }
-    } else if (_cmController.text.trim().isNotEmpty) {
-      customHeight = double.tryParse(_cmController.text.trim());
     }
 
     final profile = UserProfile(
@@ -135,10 +142,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           Expanded(
                             child: TextField(
-                              controller: _inchController,
+                              controller: _ftController,
                               decoration: InputDecoration(
-                                labelText: 'Height (inches)',
-                                hintText: '68.9',
+                                labelText: 'Feet',
+                                prefixIcon: const Icon(Icons.height),
+                                hintText: '5',
                                 filled: true,
                                 fillColor: AppTheme.surfaceMuted.withValues(alpha: 0.5),
                                 border: OutlineInputBorder(
@@ -155,11 +163,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextField(
-                              controller: _cmController,
+                              controller: _inController,
                               decoration: InputDecoration(
-                                labelText: 'Height (cm)',
+                                labelText: 'Inches',
                                 prefixIcon: const Icon(Icons.height),
-                                hintText: '175',
+                                hintText: '8',
                                 filled: true,
                                 fillColor: AppTheme.surfaceMuted.withValues(alpha: 0.5),
                                 border: OutlineInputBorder(

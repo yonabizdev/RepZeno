@@ -351,6 +351,7 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
                       
                       return ListView.separated(
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: logs.length,
                         separatorBuilder: (_, __) => const Divider(color: AppTheme.outline, height: 1),

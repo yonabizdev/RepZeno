@@ -507,6 +507,185 @@ class DatabaseHelper {
     final results = await db.rawQuery('PRAGMA table_info($tableName)');
     return results.any((row) => row['name'] == columnName);
   }
+
+  Future<void> mergeDatabase(String importPath) async {
+    final db = await database;
+    
+    // Attach the secondary database
+    final safePath = importPath.replaceAll("'", "''");
+    await db.execute("ATTACH DATABASE '$safePath' AS importDb");
+    
+    try {
+      // 1. Merge User Profile
+      final localProfile = await db.query('user_profile', limit: 1);
+      final importProfile = await db.rawQuery('SELECT * FROM importDb.user_profile LIMIT 1').catchError((_) => <Map<String, dynamic>>[]);
+      
+      if (importProfile.isNotEmpty) {
+        final iProf = importProfile.first;
+        bool localHasData = false;
+        if (localProfile.isNotEmpty) {
+          final lProf = localProfile.first;
+          if (lProf['name'] != null || lProf['height'] != null || lProf['gender'] != null) {
+            localHasData = true;
+          }
+        }
+        
+        if (!localHasData) {
+          final values = {
+            'name': iProf['name'],
+            'height': iProf['height'],
+            'gender': iProf['gender'],
+          };
+          if (localProfile.isEmpty) {
+            await db.insert('user_profile', values);
+          } else {
+            await db.update('user_profile', values, where: 'id = ?', whereArgs: [localProfile.first['id']]);
+          }
+        }
+      }
+      
+      // 2. Merge Weight Logs
+      final importWL = await db.rawQuery('SELECT * FROM importDb.weight_logs').catchError((_) => <Map<String, dynamic>>[]);
+      for (final wl in importWL) {
+        final existing = await db.query('weight_logs', where: 'createdAt = ?', whereArgs: [wl['createdAt']], limit: 1);
+        if (existing.isEmpty) {
+          await db.insert('weight_logs', {
+            'date': wl['date'],
+            'weight': wl['weight'],
+            'createdAt': wl['createdAt'],
+          });
+        }
+      }
+      
+      // 3. Muscle Groups Mapping
+      final importMg = await db.rawQuery('SELECT * FROM importDb.muscle_groups');
+      final localMg = await db.query('muscle_groups');
+      final mgMap = <int, int>{}; // importId -> localId
+      
+      for (final iMg in importMg) {
+        final iId = iMg['id'] as int;
+        final name = iMg['name'] as String;
+        final match = localMg.cast<Map<String, dynamic>?>().firstWhere((l) => (l!['name'] as String).toLowerCase() == name.toLowerCase(), orElse: () => null);
+        if (match != null) {
+          mgMap[iId] = match['id'] as int;
+        } else {
+          final newId = await db.insert('muscle_groups', {'name': name});
+          mgMap[iId] = newId;
+        }
+      }
+      
+      // 4. Exercises Mapping
+      final importEx = await db.rawQuery('SELECT * FROM importDb.exercises');
+      final localEx = await db.query('exercises');
+      final exMap = <int, int>{}; // importId -> localId
+      
+      for (final iEx in importEx) {
+        final iId = iEx['id'] as int;
+        final name = iEx['name'] as String;
+        final oldMgId = iEx['muscleGroupId'] as int;
+        final newMgId = mgMap[oldMgId] ?? oldMgId;
+        
+        final match = localEx.cast<Map<String, dynamic>?>().firstWhere((l) => 
+          (l!['name'] as String).toLowerCase() == name.toLowerCase() && l['muscleGroupId'] == newMgId, 
+          orElse: () => null);
+          
+        if (match != null) {
+          exMap[iId] = match['id'] as int;
+        } else {
+           final Map<String, Object?> values = {
+            'name': name,
+            'muscleGroupId': newMgId,
+            'isCustom': iEx['isCustom'],
+            'seedKey': iEx['seedKey'],
+            'isArchived': iEx['isArchived'] ?? 0,
+          };
+          if (iEx.containsKey('trackingType')) {
+             values['trackingType'] = iEx['trackingType'];
+          } else {
+             values['trackingType'] = 'weight_reps';
+          }
+          final newId = await db.insert('exercises', values);
+          exMap[iId] = newId;
+        }
+      }
+      
+      // 5. Workouts Mapping
+      final importWo = await db.rawQuery('SELECT * FROM importDb.workouts');
+      final localWo = await db.query('workouts');
+      final woMap = <int, int>{};
+      
+      for (final iWo in importWo) {
+        final iId = iWo['id'] as int;
+        final date = iWo['date'] as String;
+        
+        final match = localWo.cast<Map<String, dynamic>?>().firstWhere((l) => l!['date'] == date, orElse: () => null);
+        
+        if (match != null) {
+          woMap[iId] = match['id'] as int;
+        } else {
+          final newId = await db.insert('workouts', {'date': date});
+          woMap[iId] = newId;
+        }
+      }
+      
+      // 6. Workout Exercises and Sets
+      final importWe = await db.rawQuery('SELECT * FROM importDb.workout_exercises');
+      final weMap = <int, int>{};
+      
+      for (final iWe in importWe) {
+        final iId = iWe['id'] as int;
+        final oldWoId = iWe['workoutId'] as int;
+        final newWoId = woMap[oldWoId];
+        final oldExId = iWe['exerciseId'] as int;
+        final newExId = exMap[oldExId];
+        
+        if (newWoId != null && newExId != null) {
+          final existingWe = await db.query('workout_exercises', 
+            where: 'workoutId = ? AND exerciseId = ?', 
+            whereArgs: [newWoId, newExId], limit: 1);
+            
+          if (existingWe.isNotEmpty) {
+             weMap[iId] = existingWe.first['id'] as int;
+          } else {
+             final newWeId = await db.insert('workout_exercises', {
+               'workoutId': newWoId,
+               'exerciseId': newExId,
+             });
+             weMap[iId] = newWeId;
+          }
+        }
+      }
+      
+      final importSets = await db.rawQuery('SELECT * FROM importDb.workout_sets');
+      for (final iSet in importSets) {
+        final oldWeId = iSet['workoutExerciseId'] as int;
+        final newWeId = weMap[oldWeId];
+        
+        if (newWeId != null) {
+          final createdAt = iSet['createdAt'];
+          final existingSet = await db.query('workout_sets',
+            where: 'workoutExerciseId = ? AND createdAt = ?',
+            whereArgs: [newWeId, createdAt], limit: 1);
+            
+          if (existingSet.isEmpty) {
+            Map<String, Object?> values = {
+              'workoutExerciseId': newWeId,
+              'weight': iSet['weight'],
+              'reps': iSet['reps'],
+              'createdAt': createdAt,
+            };
+            if (iSet.containsKey('durationSeconds')) {
+              values['durationSeconds'] = iSet['durationSeconds'];
+            }
+            await db.insert('workout_sets', values);
+          }
+        }
+      }
+      
+    } finally {
+      await db.execute('DETACH DATABASE importDb');
+    }
+  }
 }
 
 class _DefaultExerciseSeed {

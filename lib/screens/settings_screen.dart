@@ -16,6 +16,7 @@ import '../providers/repository_providers.dart';
 import '../providers/workout_provider.dart';
 import '../providers/exercise_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/profile_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -109,19 +110,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
 
         final importedFile = File(filePath);
-        final docsDir = await getApplicationDocumentsDirectory();
-        final dbPath = join(docsDir.path, 'repzeno.db');
         
-        // Safely close existing connection before overwriting
-        await DatabaseHelper.instance.closeAndReset();
-        await importedFile.copy(dbPath);
+        // Merge the incoming database with the current one instead of overwriting
+        await DatabaseHelper.instance.mergeDatabase(importedFile.path);
         
         // Force Riverpod to dump cached memory and pull fresh from the new DB
         ref.invalidate(workoutRepositoryProvider);
         ref.invalidate(exerciseRepositoryProvider);
+        ref.invalidate(profileRepositoryProvider);
         ref.invalidate(allWorkoutsProvider);
         ref.invalidate(workoutByDateProvider);
         ref.invalidate(muscleGroupsProvider);
+        ref.invalidate(userProfileProvider);
+        ref.invalidate(weightLogsProvider);
         
         if (mounted) {
           showDialog(
@@ -175,8 +176,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // Force Riverpod to clear UI caches
       ref.invalidate(workoutRepositoryProvider);
       ref.invalidate(exerciseRepositoryProvider);
+      ref.invalidate(profileRepositoryProvider);
       ref.invalidate(allWorkoutsProvider);
       ref.invalidate(workoutByDateProvider);
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(weightLogsProvider);
       
       if (mounted) {
         showDialog(
@@ -185,7 +189,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           builder: (ctx) => AlertDialog(
             backgroundColor: AppTheme.surface,
             title: const Text('Data Deleted'),
-            content: const Text('All your data has been permanently wiped and your session has been reset.'),
+            content: const Text('All your data (workouts, exercises, profile details, and weight logs) has been permanently wiped and your session has been reset.'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -235,13 +239,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
                   title: const Text('Export Backup'),
-                  subtitle: const Text('Save your workout history as a file.'),
+                  subtitle: const Text('Save your workout history, profile, and weight logs as a file.'),
                   onTap: () => _exportDatabase(),
                 ),
                 ListTile(
                   leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
                   title: const Text('Import Backup'),
-                  subtitle: const Text('Restore from a previously saved file.'),
+                  subtitle: const Text('Restore workouts, merge profile details, and weight logs.'),
                   onTap: () => _importDatabase(),
                 ),
                 ListTile(
@@ -259,14 +263,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
                   title: const Text('Delete All Data', style: TextStyle(color: Colors.redAccent)),
-                  subtitle: const Text('Permanently wipe all workouts and exercises.'),
+                  subtitle: const Text('Permanently wipe workouts, exercises, profile, and weight logs.'),
                   onTap: () {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         backgroundColor: AppTheme.surface,
                         title: const Text('Delete All Data?'),
-                        content: const Text('This action cannot be undone. Are you absolutely sure?'),
+                        content: const Text('This action will permanently erase your profile, weight logs, and all workout history. This cannot be undone. Are you absolutely sure?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
