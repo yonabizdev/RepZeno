@@ -1626,13 +1626,33 @@ Future<bool> _showDeleteConfirmation(
           title: Text(title),
           content: Text(message),
           actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(confirmLabel),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      foregroundColor: const Color(0xFFFF8D8D),
+                      side: const BorderSide(
+                        color: Color(0x66FF7A7A),
+                        width: 1.5,
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: Text(confirmLabel),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

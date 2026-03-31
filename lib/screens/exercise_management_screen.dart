@@ -294,13 +294,33 @@ class _ExerciseManagementScreenState
               'Delete "${exercise.name}" from your exercise library? It will be removed from future exercise pickers.',
             ),
             actions: [
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Delete'),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        foregroundColor: const Color(0xFFFF8D8D),
+                        side: const BorderSide(
+                          color: Color(0x66FF7A7A),
+                          width: 1.5,
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Delete'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -272,16 +272,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         title: const Text('Delete All Data?'),
                         content: const Text('This action will permanently erase your profile, weight logs, and all workout history. This cannot be undone. Are you absolutely sure?'),
                         actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted)),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _deleteAllData();
-                            },
-                            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                    foregroundColor: Colors.redAccent,
+                                    side: const BorderSide(
+                                      color: Color(0x66FF5252),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    _deleteAllData();
+                                  },
+                                  child: const Text('Delete'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
