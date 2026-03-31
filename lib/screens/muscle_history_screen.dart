@@ -9,6 +9,7 @@ import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/selection_sheet.dart';
+import '../widgets/glass_app_bar.dart';
 
 class MuscleHistoryScreen extends ConsumerStatefulWidget {
   final int muscleGroupId;
@@ -61,7 +62,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Muscle History')),
+      appBar: const GlassAppBar(title: Text('Muscle History')),
       body: AppBackdrop(
         child: Column(
           children: [

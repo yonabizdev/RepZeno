@@ -8,6 +8,7 @@ import '../models/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -181,7 +182,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('My Profile')),
+      appBar: const GlassAppBar(title: Text('My Profile')),
       body: AppBackdrop(
         child: profileAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

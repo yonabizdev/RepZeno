@@ -15,6 +15,7 @@ import '../providers/workout_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/glass_app_bar.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -146,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
+      appBar: GlassAppBar(
         title: Text(
           greeting,
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),

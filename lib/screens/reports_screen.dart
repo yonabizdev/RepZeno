@@ -9,6 +9,7 @@ import '../models/user_profile.dart';
 import '../models/weight_log.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -57,7 +58,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Health Reports')),
+      appBar: const GlassAppBar(title: Text('Health Reports')),
       body: AppBackdrop(
         child: profileAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

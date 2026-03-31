@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
@@ -14,7 +15,7 @@ class PrivacyScreen extends StatelessWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Privacy & Data')),
+      appBar: const GlassAppBar(title: Text('Privacy & Data')),
       body: AppBackdrop(
         child: ListView(
           padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),

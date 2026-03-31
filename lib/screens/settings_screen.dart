@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 import '../database/database_helper.dart';
 import '../providers/repository_providers.dart';
 import '../providers/workout_provider.dart';
@@ -211,7 +212,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const GlassAppBar(title: Text('Settings')),
       body: AppBackdrop(
         child: ListView(
           padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),

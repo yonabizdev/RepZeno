@@ -14,6 +14,7 @@ import '../providers/workout_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 
 class WorkoutLogScreen extends ConsumerStatefulWidget {
   final String date;
@@ -65,7 +66,7 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Workout Log')),
+      appBar: const GlassAppBar(title: Text('Workout Log')),
       body: AppBackdrop(
         child: workoutAsync.when(
           data: (workout) {

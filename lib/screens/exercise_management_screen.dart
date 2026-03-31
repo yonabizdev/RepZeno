@@ -10,6 +10,8 @@ import '../providers/workout_provider.dart';
 import '../repositories/exercise_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/selection_sheet.dart';
+import '../widgets/glass_app_bar.dart';
+import '../widgets/app_backdrop.dart';
 
 enum _ExerciseLibraryFilter { all, builtIn, custom }
 
@@ -38,13 +40,15 @@ class _ExerciseManagementScreenState
   Widget build(BuildContext context) {
     final muscleGroupsAsync = ref.watch(muscleGroupsProvider);
     final libraryExercisesAsync = ref.watch(libraryExercisesProvider);
+    final topContentInset = MediaQuery.paddingOf(context).top + kToolbarHeight + 12;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Exercises')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      extendBodyBehindAppBar: true,
+      appBar: const GlassAppBar(title: Text('Manage Exercises')),
+      body: AppBackdrop(
         child: muscleGroupsAsync.when(
           data: (muscleGroups) => ListView(
+            padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
             children: [
               ElevatedButton.icon(
                 onPressed: () =>

@@ -12,6 +12,7 @@ import '../repositories/exercise_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/selection_sheet.dart';
+import '../widgets/glass_app_bar.dart';
 
 class AddExerciseScreen extends ConsumerStatefulWidget {
   final int? workoutId;
@@ -57,7 +58,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Add Exercise')),
+      appBar: const GlassAppBar(title: Text('Add Exercise')),
       body: AppBackdrop(
         child: muscleGroupsAsync.when(
           data: (muscleGroups) =>

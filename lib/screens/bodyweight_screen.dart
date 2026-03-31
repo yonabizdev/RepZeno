@@ -7,6 +7,7 @@ import '../models/weight_log.dart';
 import '../providers/profile_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
+import '../widgets/glass_app_bar.dart';
 
 class BodyweightScreen extends ConsumerStatefulWidget {
   const BodyweightScreen({super.key});
@@ -246,7 +247,7 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(title: const Text('Bodyweight Tracker')),
+      appBar: const GlassAppBar(title: Text('Bodyweight Tracker')),
       body: AppBackdrop(
         child: ListView(
           padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
