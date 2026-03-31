@@ -18,6 +18,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameController = TextEditingController();
+  final _genderController = TextEditingController();
   final _ftController = TextEditingController();
   final _inController = TextEditingController();
   final _dobController = TextEditingController();
@@ -27,6 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _genderController.dispose();
     _ftController.dispose();
     _inController.dispose();
     _dobController.dispose();
@@ -45,6 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _inController.text = inches.toString();
       }
       _selectedGender = profile.gender;
+      _genderController.text = _selectedGender ?? '';
       _dobController.text = profile.dateOfBirth ?? '';
       _isLoading = false;
     }
@@ -115,6 +118,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _dobController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
+  }
+
+  void _showGenderPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        final options = ['Male', 'Female', 'Other', 'Prefer not to say'];
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Select Gender',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ...options.map((option) => ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        fontWeight: _selectedGender == option ? FontWeight.bold : FontWeight.normal,
+                        color: _selectedGender == option ? AppTheme.primary : Colors.white,
+                      ),
+                    ),
+                    trailing: _selectedGender == option ? const Icon(Icons.check_circle, color: AppTheme.primary) : null,
+                    onTap: () {
+                      setState(() {
+                        _selectedGender = option;
+                        _genderController.text = option;
+                      });
+                      Navigator.pop(context);
+                    },
+                  )),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -223,12 +280,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedGender,
-                        isExpanded: true,
+                      TextField(
+                        controller: _genderController,
+                        readOnly: true,
+                        onTap: _showGenderPicker,
                         decoration: InputDecoration(
                           labelText: 'Gender',
                           prefixIcon: const Icon(Icons.wc),
+                          suffixIcon: const Icon(Icons.arrow_drop_down),
                           filled: true,
                           fillColor: AppTheme.surfaceMuted.withValues(alpha: 0.5),
                           border: OutlineInputBorder(
@@ -236,18 +295,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             borderSide: BorderSide.none,
                           ),
                         ),
-                        dropdownColor: AppTheme.surfaceElevated,
-                        items: const [
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
-                          DropdownMenuItem(value: 'Female', child: Text('Female')),
-                          DropdownMenuItem(value: 'Other', child: Text('Other')),
-                          DropdownMenuItem(value: 'Prefer not to say', child: Text('Prefer not to say')),
-                        ],
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedGender = val;
-                          });
-                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(

@@ -489,11 +489,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     // IBW (Devine)
     final heightInches = heightCm / 2.54;
     double ibw = 0;
+    double devineBase = 50.0;
+    if (profile.gender == 'Female') {
+      devineBase = 45.5;
+    } else if (profile.gender != 'Male') {
+      devineBase = 47.75; // Median for non-binary representations
+    }
+    
     if (heightInches > 60) {
-       final base = profile.gender == 'Female' ? 45.5 : 50.0;
-       ibw = base + 2.3 * (heightInches - 60);
+       ibw = devineBase + 2.3 * (heightInches - 60);
     } else {
-       ibw = profile.gender == 'Female' ? 45.5 : 50.0;
+       ibw = devineBase;
     }
     
     // Max Heart Rate (Tanaka)
