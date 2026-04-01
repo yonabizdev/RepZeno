@@ -168,14 +168,11 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
 
     return exercisesAsync.when(
       data: (exercises) {
-        int totalSets = 0;
-        for (final ex in exercises) {
-          final count = ref.watch(workoutSetsProvider(ex.id!)).maybeWhen(
-            data: (sets) => sets.length,
-            orElse: () => 0,
-          );
-          totalSets += count;
-        }
+        final statsAsync = ref.watch(workoutStatsProvider(workoutId));
+        final stats = statsAsync.maybeWhen(
+          data: (s) => s,
+          orElse: () => {'exerciseCount': exercises.length, 'setCount': 0},
+        );
 
         return ListView(
           physics: const BouncingScrollPhysics(
@@ -195,8 +192,8 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
             ],
             _WorkoutHeader(
               dateLabel: titleDate,
-              exerciseCount: exercises.length,
-              setCount: totalSets,
+              exerciseCount: stats['exerciseCount'],
+              setCount: stats['setCount'] ?? 0,
             ),
             const SizedBox(height: 16),
             Center(
@@ -694,8 +691,12 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
       exerciseHistoryProvider(widget.workoutExercise.exerciseId),
     );
     final hasHistory = historyAsync.maybeWhen(
-      data: (allHistory) =>
-          allHistory.any((row) => row['workout_date'] != widget.date),
+      data: (allHistory) => allHistory.any((row) {
+        final rowDate = DateTime.tryParse(row['workout_date'] as String);
+        final currentDate = DateTime.tryParse(widget.date);
+        if (rowDate == null || currentDate == null) return false;
+        return rowDate.isBefore(currentDate);
+      }),
       orElse: () => false,
     );
 

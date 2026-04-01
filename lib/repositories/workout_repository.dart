@@ -101,40 +101,42 @@ class WorkoutRepository {
 
   Future<void> removeExerciseFromWorkout(int workoutExerciseId) async {
     final db = await dbHelper.database;
-    final workoutExercise = await db.query(
-      'workout_exercises',
-      columns: ['workoutId'],
-      where: 'id = ?',
-      whereArgs: [workoutExerciseId],
-      limit: 1,
-    );
-    final workoutId = workoutExercise.isEmpty
-        ? null
-        : (workoutExercise.first['workoutId'] as int);
 
-    await db.delete(
-      'workout_sets',
-      where: 'workoutExerciseId = ?',
-      whereArgs: [workoutExerciseId],
-    );
-    await db.delete(
-      'workout_exercises',
-      where: 'id = ?',
-      whereArgs: [workoutExerciseId],
-    );
+    await db.transaction((txn) async {
+      final workoutExercise = await txn.query(
+        'workout_exercises',
+        columns: ['workoutId'],
+        where: 'id = ?',
+        whereArgs: [workoutExerciseId],
+        limit: 1,
+      );
+      final workoutId =
+          workoutExercise.isEmpty
+              ? null
+              : (workoutExercise.first['workoutId'] as int);
 
-    if (workoutId == null) {
-      return;
-    }
+      await txn.delete(
+        'workout_sets',
+        where: 'workoutExerciseId = ?',
+        whereArgs: [workoutExerciseId],
+      );
+      await txn.delete(
+        'workout_exercises',
+        where: 'id = ?',
+        whereArgs: [workoutExerciseId],
+      );
 
-    final remaining = await db.rawQuery(
-      'SELECT COUNT(*) as c FROM workout_exercises WHERE workoutId = ?',
-      [workoutId],
-    );
-    final count = (remaining.first['c'] as num?)?.toInt() ?? 0;
-    if (count == 0) {
-      await db.delete('workouts', where: 'id = ?', whereArgs: [workoutId]);
-    }
+      if (workoutId != null) {
+        final remaining = await txn.rawQuery(
+          'SELECT COUNT(*) as c FROM workout_exercises WHERE workoutId = ?',
+          [workoutId],
+        );
+        final count = (remaining.first['c'] as num?)?.toInt() ?? 0;
+        if (count == 0) {
+          await txn.delete('workouts', where: 'id = ?', whereArgs: [workoutId]);
+        }
+      }
+    });
   }
 
   Future<List<WorkoutSet>> getSetsForWorkoutExercise(
@@ -292,5 +294,27 @@ class WorkoutRepository {
       [exerciseId],
     );
     return results;
+  }
+
+  Future<Map<String, int>> getWorkoutStats(int workoutId) async {
+    final db = await dbHelper.database;
+    final results = await db.rawQuery(
+      '''
+      SELECT 
+        (SELECT COUNT(*) FROM workout_exercises WHERE workoutId = ?) as exerciseCount,
+        (SELECT COUNT(*) FROM workout_sets ws 
+         JOIN workout_exercises we ON ws.workoutExerciseId = we.id 
+         WHERE we.workoutId = ?) as setCount
+      ''',
+      [workoutId, workoutId],
+    );
+    if (results.isNotEmpty) {
+      final row = results.first;
+      return {
+        'exerciseCount': (row['exerciseCount'] as num?)?.toInt() ?? 0,
+        'setCount': (row['setCount'] as num?)?.toInt() ?? 0,
+      };
+    }
+    return {'exerciseCount': 0, 'setCount': 0};
   }
 }

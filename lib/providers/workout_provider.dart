@@ -38,3 +38,9 @@ final exerciseHistoryProvider = FutureProvider.autoDispose
       final repo = ref.watch(workoutRepositoryProvider);
       return repo.getExerciseHistory(exerciseId);
     });
+
+final workoutStatsProvider = FutureProvider.autoDispose
+    .family<Map<String, int>, int>((ref, workoutId) async {
+      final repo = ref.watch(workoutRepositoryProvider);
+      return repo.getWorkoutStats(workoutId);
+    });

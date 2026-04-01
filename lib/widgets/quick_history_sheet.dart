@@ -85,15 +85,13 @@ class QuickHistorySheet extends ConsumerWidget {
             ),
             child: historyAsync.when(
               data: (allHistory) {
-                final history = allHistory
-                    .where(
-                      (row) =>
-                          (row['workout_date'] as String).compareTo(
-                            currentDate,
-                          ) <
-                          0,
-                    )
-                    .toList();
+                final history = allHistory.where((row) {
+                  final rowDate =
+                      DateTime.tryParse(row['workout_date'] as String);
+                  final curr = DateTime.tryParse(currentDate);
+                  if (rowDate == null || curr == null) return false;
+                  return rowDate.isBefore(curr);
+                }).toList();
 
                 if (history.isEmpty) {
                   return _buildEmptyState();
