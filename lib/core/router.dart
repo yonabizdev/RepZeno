@@ -9,6 +9,8 @@ import '../screens/settings_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/bodyweight_screen.dart';
 import '../screens/reports_screen.dart';
+import '../screens/progress_gallery_screen.dart';
+import '../screens/comparison_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -65,6 +67,25 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/reports',
       builder: (context, state) => const ReportsScreen(),
+    ),
+    GoRoute(
+      path: '/progress',
+      builder: (context, state) => const ProgressGalleryScreen(),
+    ),
+    GoRoute(
+      path: '/progress/compare',
+      builder: (context, state) {
+        final pathA = state.uri.queryParameters['pathA']!;
+        final dateA = state.uri.queryParameters['dateA']!;
+        final pathB = state.uri.queryParameters['pathB']!;
+        final dateB = state.uri.queryParameters['dateB']!;
+        return ComparisonScreen(
+          pathA: pathA,
+          dateA: dateA,
+          pathB: pathB,
+          dateB: dateB,
+        );
+      },
     ),
   ],
 );

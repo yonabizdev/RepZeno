@@ -15,11 +15,32 @@ class SortSetsNotifier extends Notifier<bool> {
   }
 
   void toggle() {
+    final prefs = ref.read(sharedPreferencesProvider);
     state = !state;
-    ref.read(sharedPreferencesProvider).setBool(_key, state);
+    prefs.setBool(_key, state);
   }
 }
 
 final sortSetsAscendingProvider = NotifierProvider<SortSetsNotifier, bool>(() {
   return SortSetsNotifier();
+});
+
+class TransformationTipNotifier extends Notifier<bool> {
+  static const _key = 'transformation_tip_dismissed';
+
+  @override
+  bool build() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? false;
+  }
+
+  void dismiss() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    state = true;
+    prefs.setBool(_key, true);
+  }
+}
+
+final transformationTipDismissedProvider = NotifierProvider<TransformationTipNotifier, bool>(() {
+  return TransformationTipNotifier();
 });

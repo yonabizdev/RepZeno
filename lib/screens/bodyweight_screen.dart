@@ -247,7 +247,7 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const GlassAppBar(title: Text('Bodyweight Tracker')),
+      appBar: const GlassAppBar(title: Text('Weight Progress')),
       body: AppBackdrop(
         child: ListView(
           padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),

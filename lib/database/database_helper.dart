@@ -9,7 +9,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static const _dbVersion = 8;
+  static const _dbVersion = 9;
   static const _storageProtectionChannel = MethodChannel(
     'com.repzeno.repzeno/storage',
   );
@@ -256,6 +256,16 @@ class DatabaseHelper {
         createdAt TEXT NOT NULL
       )
     ''');
+    await db.execute('''
+      CREATE TABLE progress_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT,
+        category TEXT DEFAULT 'Full Body',
+        createdAt TEXT NOT NULL
+      )
+    ''');
 
     await _seedDatabase(db);
   }
@@ -386,6 +396,19 @@ class DatabaseHelper {
 
     if (oldVersion < 8) {
       await db.execute('ALTER TABLE user_profile ADD COLUMN dateOfBirth TEXT');
+    }
+
+    if (oldVersion < 9) {
+      await db.execute('''
+        CREATE TABLE progress_photos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          path TEXT NOT NULL,
+          date TEXT NOT NULL,
+          note TEXT,
+          category TEXT DEFAULT 'Full Body',
+          createdAt TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -685,6 +708,21 @@ class DatabaseHelper {
             }
             await db.insert('workout_sets', values);
           }
+        }
+      }
+      
+      // 7. Progress Photos
+      final importPp = await db.rawQuery('SELECT * FROM importDb.progress_photos').catchError((_) => <Map<String, dynamic>>[]);
+      for (final pp in importPp) {
+        final existing = await db.query('progress_photos', where: 'createdAt = ?', whereArgs: [pp['createdAt']], limit: 1);
+        if (existing.isEmpty) {
+          await db.insert('progress_photos', {
+            'path': pp['path'], 
+            'date': pp['date'],
+            'note': pp['note'],
+            'category': pp['category'],
+            'createdAt': pp['createdAt'],
+          });
         }
       }
       

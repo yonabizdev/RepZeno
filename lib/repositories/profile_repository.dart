@@ -53,4 +53,19 @@ class ProfileRepository {
     final db = await _dbHelper.database;
     await db.delete('weight_logs', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<WeightLog?> getWeightLogByDate(String date) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'weight_logs',
+      where: 'date = ?',
+      whereArgs: [date],
+      orderBy: 'createdAt DESC',
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return WeightLog.fromMap(result.first);
+    }
+    return null;
+  }
 }

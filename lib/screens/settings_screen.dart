@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:archive/archive_io.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/glass_app_bar.dart';
@@ -18,6 +19,7 @@ import '../providers/workout_provider.dart';
 import '../providers/exercise_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/progress_photo_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -42,13 +44,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (await file.exists()) {
         final timestamp = DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now());
         final tempDir = await getTemporaryDirectory();
-        final backupFileName = 'RepZeno_Backup_$timestamp.db';
-        final tempBackupFile = await file.copy(join(tempDir.path, backupFileName));
+        
+        // Create an archive containing the DB and all progress photos
+        final archive = Archive();
+        
+        // 1. Add DB file
+        final dbBytes = await file.readAsBytes();
+        archive.addFile(ArchiveFile('repzeno.db', dbBytes.length, dbBytes));
+        
+        // 2. Add Photos directory if exists
+        final photosDir = Directory(join(docsDir.path, 'progress_photos'));
+        if (await photosDir.exists()) {
+          final entities = await photosDir.list().toList();
+          for (final entity in entities) {
+            if (entity is File) {
+              final bytes = await entity.readAsBytes();
+              // Store as progress_photos/filename.ext in zip
+              final name = join('progress_photos', basename(entity.path));
+              archive.addFile(ArchiveFile(name, bytes.length, bytes));
+            }
+          }
+        }
+
+        final zipEncoder = ZipEncoder();
+        final zipBytes = zipEncoder.encode(archive);
+        
+        final backupFileName = 'RepZeno_Full_Backup_$timestamp.zip';
+        final tempBackupFile = File(join(tempDir.path, backupFileName));
+        await tempBackupFile.writeAsBytes(zipBytes);
         
         await SharePlus.instance.share(
           ShareParams(
-            files: [XFile(tempBackupFile.path, mimeType: 'application/x-sqlite3')],
-            text: 'RepZeno Database Backup',
+            files: [XFile(tempBackupFile.path, mimeType: 'application/zip')],
+            text: 'RepZeno Complete Backup (History + Photos)',
           ),
         );
       } else {
@@ -82,21 +110,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['db'],
+        allowedExtensions: ['db', 'zip'],
       );
       
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
+        final String dbToMergePath;
         
-        if (!filePath.endsWith('.db')) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid file type. Please select a .db backup file.')));
+        if (filePath.endsWith('.zip')) {
+          // Handle ZIP full backup
+          final bytes = await File(filePath).readAsBytes();
+          final archive = ZipDecoder().decodeBytes(bytes);
+          final tempDir = await getTemporaryDirectory();
+          final extractDir = Directory(join(tempDir.path, 'repzeno_restore_${DateTime.now().millisecondsSinceEpoch}'));
+          await extractDir.create(recursive: true);
+
+          String? extractedDbPath;
+          final photosDir = Directory(join((await getApplicationDocumentsDirectory()).path, 'progress_photos'));
+          if (!await photosDir.exists()) await photosDir.create(recursive: true);
+
+          for (final file in archive) {
+            final filename = file.name;
+            if (file.isFile) {
+              final data = file.content as List<int>;
+              final outFile = File(join(extractDir.path, filename));
+              await outFile.parent.create(recursive: true);
+              await outFile.writeAsBytes(data);
+
+              if (filename == 'repzeno.db') {
+                extractedDbPath = outFile.path;
+              } else if (filename.startsWith('progress_photos/')) {
+                // Move photo to the app's progress_photos directory
+                final photoName = basename(filename);
+                final finalPhotoPath = join(photosDir.path, photoName);
+                await outFile.copy(finalPhotoPath);
+              }
+            }
+          }
+
+          if (extractedDbPath == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Invalid backup: repzeno.db not found in ZIP.')),
+              );
+            }
+            return;
+          }
+          dbToMergePath = extractedDbPath;
+        } else if (filePath.endsWith('.db')) {
+          dbToMergePath = filePath;
+        } else {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid file type. Please select a .zip or .db backup file.')));
           return;
         }
 
         // Validate structure by attempting to open it
         try {
-          // Import sqflite dynamically to test DB
-          final testDb = await openDatabase(filePath, readOnly: true);
+          final testDb = await openDatabase(dbToMergePath, readOnly: true);
           final tables = await testDb.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
           final tableNames = tables.map((e) => e['name'] as String).toList();
           await testDb.close();
@@ -110,10 +180,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           return;
         }
 
-        final importedFile = File(filePath);
-        
         // Merge the incoming database with the current one instead of overwriting
-        await DatabaseHelper.instance.mergeDatabase(importedFile.path);
+        await DatabaseHelper.instance.mergeDatabase(dbToMergePath);
         
         // Force Riverpod to dump cached memory and pull fresh from the new DB
         ref.invalidate(workoutRepositoryProvider);
@@ -124,6 +192,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.invalidate(muscleGroupsProvider);
         ref.invalidate(userProfileProvider);
         ref.invalidate(weightLogsProvider);
+        ref.invalidate(progressPhotosProvider);
         
         if (mounted) {
           showDialog(
@@ -139,7 +208,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     Navigator.pop(ctx);
                     context.go('/');
                   },
-                  child: const Text('OK', style: TextStyle(color: AppTheme.primary)),
+                  child: const Text('OK', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -164,6 +233,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not supported on Web.')));
       return;
     }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete All Data?'),
+        content: const Text('This will permanently erase all your workout history, progress photos, profile habits, and weight logs. This action cannot be undone.'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
+                    ),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Delete All'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirmed) return;
     
     // Safely close the active connection first
     await DatabaseHelper.instance.closeAndReset();
@@ -182,26 +287,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(workoutByDateProvider);
       ref.invalidate(userProfileProvider);
       ref.invalidate(weightLogsProvider);
+      ref.invalidate(progressPhotosProvider);
       
+      // Also delete the progress_photos directory if it exists
+      final photosDir = Directory(join(docsDir.path, 'progress_photos'));
+      if (await photosDir.exists()) {
+        await photosDir.delete(recursive: true);
+      }
+
       if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: AppTheme.surface,
-            title: const Text('Data Deleted'),
-            content: const Text('All your data (workouts, exercises, profile details, and weight logs) has been permanently wiped and your session has been reset.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  context.go('/');
-                },
-                child: const Text('OK', style: TextStyle(color: Colors.redAccent)),
-              ),
-            ],
-          ),
-        );
+        context.go('/');
       }
     }
   }
@@ -240,13 +335,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
                   title: const Text('Export Backup'),
-                  subtitle: const Text('Save your workout history, profile, and weight logs as a file.'),
+                  subtitle: const Text('Save your workout history, profile, weight logs, and transformation photos.'),
                   onTap: () => _exportDatabase(),
                 ),
                 ListTile(
                   leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
                   title: const Text('Import Backup'),
-                  subtitle: const Text('Restore workouts, merge profile details, and weight logs.'),
+                  subtitle: const Text('Restore workouts, profile details, weight logs, and photos.'),
                   onTap: () => _importDatabase(),
                 ),
                 ListTile(
@@ -264,50 +359,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
                   title: const Text('Delete All Data', style: TextStyle(color: Colors.redAccent)),
-                  subtitle: const Text('Permanently wipe workouts, exercises, profile, and weight logs.'),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: AppTheme.surface,
-                        title: const Text('Delete All Data?'),
-                        content: const Text('This action will permanently erase your profile, weight logs, and all workout history. This cannot be undone. Are you absolutely sure?'),
-                        actions: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(48),
-                                  ),
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('Cancel'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(48),
-                                    foregroundColor: Colors.redAccent,
-                                    side: const BorderSide(
-                                      color: Color(0x66FF5252),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                    _deleteAllData();
-                                  },
-                                  child: const Text('Delete'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                  subtitle: const Text('Permanently wipe workouts, exercises, profile, weight logs, and transformation gallery.'),
+                  onTap: _deleteAllData,
                 ),
               ],
             ),

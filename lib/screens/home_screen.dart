@@ -8,9 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/workout.dart';
-import '../providers/exercise_provider.dart';
 import '../providers/profile_provider.dart';
-import '../providers/settings_provider.dart';
 import '../providers/workout_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';

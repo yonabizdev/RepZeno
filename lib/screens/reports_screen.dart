@@ -58,7 +58,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const GlassAppBar(title: Text('Health Reports')),
+      appBar: const GlassAppBar(title: Text('Health Insights')),
       body: AppBackdrop(
         child: profileAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

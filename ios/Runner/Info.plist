@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>RepZeno needs camera access to capture your progress photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RepZeno needs gallery access to import your progress photos.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

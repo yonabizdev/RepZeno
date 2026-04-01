@@ -26,6 +26,7 @@ class PrivacyScreen extends StatelessWidget {
               title: 'What RepZeno stores',
               points: [
                 'Workout dates, exercises, sets, weight, reps, and duration logs.',
+                'Progress photos (saved locally for your transformation tracking).',
                 'Custom exercises you create inside the app.',
                 'A few local UI preferences, such as dismissed tips.',
               ],
@@ -34,8 +35,9 @@ class PrivacyScreen extends StatelessWidget {
             const _PrivacySection(
               title: 'How the data is used',
               points: [
-                'Your data is used only to power workout logging and history inside the app.',
-                'RepZeno does not require an account and does not sync your workout data to RepZeno servers.',
+                'Your data is used only to power workout logging, bodyweight tracking, and progress insights inside the app.',
+                'Progress photos are used solely to generate side-by-side or slider comparisons for your personal review.',
+                'RepZeno does not require an account and does not sync your data to RepZeno servers.',
                 'The app does not use analytics, ads, or cross-app tracking.',
               ],
             ),
@@ -43,18 +45,28 @@ class PrivacyScreen extends StatelessWidget {
             _PrivacySection(
               title: 'Backup and storage',
               points: [
-                'The workout database is stored locally on your device.',
+                'The workout database and progress photos are stored locally on your device.',
+                'Media is saved in a private storage area that other apps cannot access.',
                 if (!kIsWeb && Platform.isAndroid)
-                  'Android cloud backup and device-transfer backup are disabled for app data.',
+                  'Android cloud backup and device-transfer backup are disabled to keep your sensitive photos private.',
                 if (!kIsWeb && Platform.isIOS)
-                  'On iPhone and iPad, the workout database is excluded from iCloud backup.',
+                  'On iPhone and iPad, the health database and photos are excluded from iCloud backup.',
+              ],
+            ),
+            const SizedBox(height: 14),
+            const _PrivacySection(
+              title: 'Hardware & Permissions',
+              points: [
+                'Camera and Gallery permissions are requested only to enable photo tracking features.',
+                'We never access your media without your explicit action (like tapping "Add Photo").',
+                'You can revoke these permissions at any time through your device settings.',
               ],
             ),
             const SizedBox(height: 14),
             const _PrivacySection(
               title: 'Delete your data',
               points: [
-                'You can remove individual workout entries and custom exercises from inside the app.',
+                'You can remove individual logs, progress photos, and custom exercises from inside the app.',
                 'To remove all local RepZeno data, uninstall the app or clear the app storage from your device settings.',
               ],
             ),
