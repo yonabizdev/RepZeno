@@ -26,13 +26,11 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      // Industry Standard: Explicitly check and request permissions for privacy & safety
-      PermissionStatus status;
+      // Industry Standard: Modern systems use a permission-less photo picker for the gallery.
+      // We only need to explicitly request permissions for active CAMERA usage.
+      PermissionStatus status = PermissionStatus.granted;
       if (source == ImageSource.camera) {
         status = await Permission.camera.request();
-      } else {
-        // Permission.photos handles Photo Library on iOS and READ_MEDIA_IMAGES on Android 13+
-        status = await Permission.photos.request();
       }
 
       if (status.isPermanentlyDenied) {
