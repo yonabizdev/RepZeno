@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../models/user_profile.dart';
 import '../models/weight_log.dart';
 import '../providers/profile_provider.dart';
 import '../theme/app_theme.dart';
@@ -19,6 +20,28 @@ class BodyweightScreen extends ConsumerStatefulWidget {
 class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
   final _weightController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
+
+  double? _calculateIdealWeight(UserProfile? profile) {
+    if (profile == null || profile.height == null || profile.gender == null) return null;
+    
+    final double heightCm = profile.height!;
+    final heightInches = heightCm / 2.54;
+    double ibw = 0;
+    double devineBase = 50.0;
+    
+    if (profile.gender == 'Female') {
+      devineBase = 45.5;
+    } else if (profile.gender != 'Male') {
+      devineBase = 47.75; // Median for non-binary representations
+    }
+    
+    if (heightInches > 60) {
+       ibw = devineBase + 2.3 * (heightInches - 60);
+    } else {
+       ibw = devineBase;
+    }
+    return ibw;
+  }
 
   @override
   void dispose() {
@@ -358,6 +381,9 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
                     loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())),
                     error: (err, stack) => Text('Error loading weights: $err'),
                     data: (logs) {
+                      final profile = ref.watch(userProfileProvider).value;
+                      final idealWeight = _calculateIdealWeight(profile);
+
                       if (logs.isEmpty) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
@@ -389,51 +415,75 @@ class _BodyweightScreenState extends ConsumerState<BodyweightScreen> {
                           IconData trendIcon = Icons.horizontal_rule_rounded;
                           Color trendColor = AppTheme.textMuted;
                           
+                          double? diff;
                           if (prevWeight != null) {
-                            if (log.weight > prevWeight) {
-                              trendIcon = Icons.arrow_upward_rounded;
-                              trendColor = Colors.redAccent;
-                            } else if (log.weight < prevWeight) {
-                              trendIcon = Icons.arrow_downward_rounded;
-                              trendColor = Colors.greenAccent;
+                            diff = log.weight - prevWeight;
+                            
+                            bool isMovingTowardsIdeal = false;
+                            if (idealWeight != null) {
+                              final double currentDist = (log.weight - idealWeight).abs();
+                              final double prevDist = (prevWeight - idealWeight).abs();
+                              // Green if current is strictly closer to ideal than previous
+                              isMovingTowardsIdeal = currentDist < prevDist;
+                              
+                              if (isMovingTowardsIdeal) {
+                                trendIcon = log.weight > prevWeight ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+                                trendColor = Colors.greenAccent;
+                              } else {
+                                trendIcon = log.weight > prevWeight ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+                                trendColor = Colors.redAccent;
+                              }
+                            } else {
+                              // Standard Fallback: Loss is green, Gain is red
+                              if (log.weight > prevWeight) {
+                                trendIcon = Icons.arrow_upward_rounded;
+                                trendColor = Colors.redAccent;
+                              } else if (log.weight < prevWeight) {
+                                trendIcon = Icons.arrow_downward_rounded;
+                                trendColor = Colors.greenAccent;
+                              }
                             }
                           }
                           
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(8), // slightly smaller
-                              decoration: BoxDecoration(
-                                color: trendColor.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(trendIcon, color: trendColor, size: 18),
-                            ),
-                            title: Row(
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
                               children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: trendColor.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(trendIcon, color: trendColor, size: 18),
+                                ),
+                                const SizedBox(width: 12),
                                 Text(
                                   '${log.weight} kg',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  DateFormat('MMM d, yyyy').format(date),
-                                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                                Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      DateFormat('MMM d, yyyy').format(date),
+                                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                                    ),
+                                  ),
                                 ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: AppTheme.textMuted, size: 20),
+                                  icon: const Icon(Icons.edit_outlined, color: AppTheme.textMuted, size: 18),
                                   onPressed: () => _editWeightLog(log),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                 ),
+                                const SizedBox(width: 8),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
                                   onPressed: () {
                                     ref.read(weightLogsProvider.notifier).deleteLog(log.id!);
                                   },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                 ),
                               ],
                             ),

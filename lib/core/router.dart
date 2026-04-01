@@ -11,6 +11,8 @@ import '../screens/bodyweight_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/progress_gallery_screen.dart';
 import '../screens/comparison_screen.dart';
+import '../screens/photo_view_screen.dart';
+import '../models/progress_photo.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -85,6 +87,15 @@ final GoRouter appRouter = GoRouter(
           pathB: pathB,
           dateB: dateB,
         );
+      },
+    ),
+    GoRoute(
+      path: '/progress/view',
+      builder: (context, state) {
+        final extras = state.extra as Map<String, dynamic>;
+        final photos = extras['photos'] as List<ProgressPhoto>;
+        final initialIndex = extras['initialIndex'] as int;
+        return PhotoViewScreen(photos: photos, initialIndex: initialIndex);
       },
     ),
   ],

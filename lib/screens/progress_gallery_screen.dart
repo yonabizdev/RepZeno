@@ -557,13 +557,19 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
                       if (_isSelectionMode) {
                         _toggleSelection(photo.id!);
                       } else {
-                        setState(() {
-                          _isSelectionMode = true;
-                          _selectedIds.add(photo.id!);
-                        });
+                        context.push(
+                          '/progress/view',
+                          extra: {
+                            'photos': sortedPhotos,
+                            'initialIndex': sortedPhotos.indexOf(photo),
+                          },
+                        );
                       }
                     },
-                    child: _PhotoCard(photo: photo, isSelected: isSelected, isSelectionMode: _isSelectionMode),
+                    child: Hero(
+                      tag: photo.path,
+                      child: _PhotoCard(photo: photo, isSelected: isSelected, isSelectionMode: _isSelectionMode),
+                    ),
                   );
                 },
               ),
