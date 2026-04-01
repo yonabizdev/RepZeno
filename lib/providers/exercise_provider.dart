@@ -28,3 +28,15 @@ final customExercisesProvider = FutureProvider<List<Exercise>>((ref) async {
   final repo = ref.watch(exerciseRepositoryProvider);
   return repo.getCustomExercises();
 });
+
+class LastSelectedMuscleGroupNotifier extends Notifier<MuscleGroup?> {
+  @override
+  MuscleGroup? build() => null;
+
+  void update(MuscleGroup? value) => state = value;
+}
+
+final lastSelectedMuscleGroupProvider =
+    NotifierProvider<LastSelectedMuscleGroupNotifier, MuscleGroup?>(
+      LastSelectedMuscleGroupNotifier.new,
+    );

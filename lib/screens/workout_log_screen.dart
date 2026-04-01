@@ -15,6 +15,7 @@ import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/glass_app_bar.dart';
+import '../widgets/quick_history_sheet.dart';
 
 class WorkoutLogScreen extends ConsumerStatefulWidget {
   final String date;
@@ -689,6 +690,15 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
         ? AppTheme.secondary
         : AppTheme.primary;
 
+    final historyAsync = ref.watch(
+      exerciseHistoryProvider(widget.workoutExercise.exerciseId),
+    );
+    final hasHistory = historyAsync.maybeWhen(
+      data: (allHistory) =>
+          allHistory.any((row) => row['workout_date'] != widget.date),
+      orElse: () => false,
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
@@ -734,6 +744,44 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                   ],
                 ),
               ),
+              Opacity(
+                opacity: hasHistory ? 1.0 : 0.35,
+                child: IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.secondary.withValues(alpha: 0.15),
+                    foregroundColor: AppTheme.secondary,
+                    side: BorderSide(
+                      color: AppTheme.secondary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  icon: const Icon(Icons.history_rounded),
+                  onPressed: hasHistory
+                      ? () {
+                          final muscleId = allExercisesAsync.value
+                                  ?.where(
+                                    (e) =>
+                                        e.id ==
+                                        widget.workoutExercise.exerciseId,
+                                  )
+                                  .firstOrNull
+                                  ?.muscleGroupId ??
+                              1;
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => QuickHistorySheet(
+                              exerciseId: widget.workoutExercise.exerciseId,
+                              exerciseName: exerciseName,
+                              muscleGroupId: muscleId,
+                              currentDate: widget.date,
+                            ),
+                          );
+                        }
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 8),
               IconButton.filled(
                 style: IconButton.styleFrom(
                   backgroundColor: const Color(0x33FF6B6B),

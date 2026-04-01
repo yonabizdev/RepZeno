@@ -32,3 +32,9 @@ final muscleHistoryProvider = FutureProvider.autoDispose
       final repo = ref.watch(workoutRepositoryProvider);
       return repo.getMuscleHistory(muscleGroupId);
     });
+
+final exerciseHistoryProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, int>((ref, exerciseId) async {
+      final repo = ref.watch(workoutRepositoryProvider);
+      return repo.getExerciseHistory(exerciseId);
+    });

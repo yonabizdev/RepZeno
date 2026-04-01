@@ -270,4 +270,27 @@ class WorkoutRepository {
     );
     return results;
   }
+
+  Future<List<Map<String, dynamic>>> getExerciseHistory(int exerciseId) async {
+    final db = await dbHelper.database;
+    final results = await db.rawQuery(
+      '''
+      SELECT 
+        w.date as workout_date, 
+        e.name as exercise_name, 
+        e.trackingType as tracking_type,
+        s.weight as set_weight, 
+        s.reps as set_reps,
+        s.durationSeconds as set_duration_seconds
+      FROM workouts w
+      JOIN workout_exercises we ON w.id = we.workoutId
+      JOIN exercises e ON we.exerciseId = e.id
+      JOIN workout_sets s ON we.id = s.workoutExerciseId
+      WHERE e.id = ?
+      ORDER BY w.date DESC, we.id DESC, s.id ASC
+    ''',
+      [exerciseId],
+    );
+    return results;
+  }
 }

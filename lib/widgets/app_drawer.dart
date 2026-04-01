@@ -134,9 +134,9 @@ class _DrawerHeader extends ConsumerWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(18),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -168,7 +168,7 @@ class _DrawerHeader extends ConsumerWidget {
                 displayName,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                 ),
@@ -180,7 +180,7 @@ class _DrawerHeader extends ConsumerWidget {
                 'Hi ...',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                 ),
@@ -190,7 +190,7 @@ class _DrawerHeader extends ConsumerWidget {
               'Hi there',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
               ),

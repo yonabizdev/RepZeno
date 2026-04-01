@@ -28,6 +28,12 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
   MuscleGroup? _selectedMuscleGroup;
   Exercise? _selectedExercise;
 
+  @override
+  void initState() {
+    super.initState();
+    _selectedMuscleGroup = ref.read(lastSelectedMuscleGroupProvider);
+  }
+
   void _refreshExerciseData(int muscleGroupId) {
     ref.invalidate(exercisesByMuscleGroupProvider(muscleGroupId));
     ref.invalidate(allExercisesProvider);
@@ -135,6 +141,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                       _selectedMuscleGroup = picked;
                       _selectedExercise = null;
                     });
+                    ref.read(lastSelectedMuscleGroupProvider.notifier).update(picked);
                   }
                 },
               ),
