@@ -65,25 +65,39 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
         ? widget.date
         : DateFormat('EEE, dd MMM yyyy').format(parsedDate);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: const GlassAppBar(title: Text('Workout Log')),
-      body: AppBackdrop(
-        child: workoutAsync.when(
-          data: (workout) {
-            if (workout == null) {
-              return _buildEmptyState(context, ref, titleDate, topContentInset);
-            }
-            return _buildWorkoutDetails(
-              context,
-              ref,
-              workout.id!,
-              titleDate,
-              topContentInset,
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Center(child: Text('Error: $e')),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/');
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: GlassAppBar(
+          title: const Text('Workout Log'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/'),
+            tooltip: 'Back to Dashboard',
+          ),
+        ),
+        body: AppBackdrop(
+          child: workoutAsync.when(
+            data: (workout) {
+              if (workout == null) {
+                return _buildEmptyState(context, ref, titleDate, topContentInset);
+              }
+              return _buildWorkoutDetails(
+                context,
+                ref,
+                workout.id!,
+                titleDate,
+                topContentInset,
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(child: Text('Error: $e')),
+          ),
         ),
       ),
     );
@@ -358,11 +372,11 @@ class _WorkoutTipBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.outline),
+        color: AppTheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +385,8 @@ class _WorkoutTipBanner extends StatelessWidget {
             padding: EdgeInsets.only(top: 2),
             child: Icon(
               Icons.lightbulb_outline_rounded,
-              color: AppTheme.secondary,
+              color: AppTheme.primary,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -380,39 +395,48 @@ class _WorkoutTipBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Quick tip',
-                  style: TextStyle(fontWeight: FontWeight.w400),
+                  'Quick Tip:',
+                  style: TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text.rich(
                   TextSpan(
                     children: [
                       const TextSpan(
                         text:
                             'Newest exercise appears first so you can keep logging without scrolling.\n',
-                        style: TextStyle(color: AppTheme.textMuted),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       TextSpan(
                         text:
                             'Swipe left on a set row to delete it with confirmation.',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
-                  style: const TextStyle(
-                    color: AppTheme.textMuted,
-                    height: 1.4,
-                  ),
+                  style: const TextStyle(height: 1.4),
                 ),
               ],
             ),
           ),
           IconButton(
             onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.textMuted),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             tooltip: 'Dismiss tip',
           ),
         ],
@@ -1137,8 +1161,12 @@ class _SetRowState extends ConsumerState<_SetRow> {
   Future<void> _saveEdits() async {
     final w = double.tryParse(_weightController.text) ?? 0;
     final r = int.tryParse(_repsController.text) ?? 0;
-    if (w <= 0 && r <= 0) {
+    if (w <= 0) {
       _weightFocusNode.requestFocus();
+      return;
+    }
+    if (r <= 0) {
+      _repsFocusNode.requestFocus();
       return;
     }
 
@@ -1989,8 +2017,12 @@ class _AddSetRowState extends ConsumerState<_AddSetRow> {
   Future<void> _submitSet() async {
     final w = double.tryParse(weightController.text) ?? 0;
     final r = int.tryParse(repsController.text) ?? 0;
-    if (w <= 0 && r <= 0) {
+    if (w <= 0) {
       _weightFocusNode.requestFocus();
+      return;
+    }
+    if (r <= 0) {
+      _repsFocusNode.requestFocus();
       return;
     }
 

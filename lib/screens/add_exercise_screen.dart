@@ -227,10 +227,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
         String name = '';
         bool isSaving = false;
         String? errorText;
-        ExerciseTrackingType trackingType =
-            muscleGroup.name.toLowerCase() == 'cardio'
-            ? ExerciseTrackingType.duration
-            : ExerciseTrackingType.weightReps;
+        ExerciseTrackingType? trackingType;
         final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
 
         return Padding(
@@ -267,7 +264,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                           name: trimmedName,
                           muscleGroupId: muscleGroup.id!,
                           isCustom: true,
-                          trackingType: trackingType,
+                          trackingType: trackingType!,
                         ),
                       );
                       _refreshExerciseData(muscleGroup.id!);
@@ -290,7 +287,7 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                     }
                   }
 
-                  final canSave = name.trim().isNotEmpty && !isSaving;
+                  final canSave = name.trim().isNotEmpty && !isSaving && trackingType != null;
 
                   return SingleChildScrollView(
                     child: Column(

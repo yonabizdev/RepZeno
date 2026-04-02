@@ -340,7 +340,7 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
           ? [
               if (_selectedIds.isNotEmpty)
                 IconButton(
-                  icon: const Icon(Icons.calendar_month_rounded, size: 28),
+                  icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.secondary, size: 28),
                   onPressed: _editPhotoDate,
                   tooltip: 'Change Date',
                 ),
@@ -468,25 +468,69 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: AppTheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.primary, size: 20),
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Icon(
+                Icons.lightbulb_outline_rounded,
+                color: AppTheme.primary,
+                size: 20,
+              ),
+            ),
             const SizedBox(width: 12),
             const Expanded(
-              child: Text(
-                'Tip: Long-press to select two photos and compare your transformation.',
-                style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quick Tip:',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  const Text(
+                    'Long-press to select photos and manage them:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const _TipItem(
+                    icon: Icons.calendar_month_rounded,
+                    color: AppTheme.secondary,
+                    text: 'Update photo dates in bulk.',
+                  ),
+                  const SizedBox(height: 6),
+                  const _TipItem(
+                    icon: Icons.delete_outline_rounded,
+                    color: Colors.redAccent,
+                    text: 'Remove multiple photos at once.',
+                  ),
+                  const SizedBox(height: 6),
+                  const _TipItem(
+                    icon: Icons.compare_arrows_rounded,
+                    color: AppTheme.primary,
+                    text: 'Select two photos to compare.',
+                  ),
+                ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.close, size: 18, color: AppTheme.textMuted),
               onPressed: () => ref.read(transformationTipDismissedProvider.notifier).dismiss(),
+              icon: const Icon(Icons.close, size: 18, color: AppTheme.textMuted),
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -672,6 +716,38 @@ class _PhotoCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+class _TipItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _TipItem({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

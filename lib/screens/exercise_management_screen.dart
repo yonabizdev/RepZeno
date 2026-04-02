@@ -366,8 +366,7 @@ class _ExerciseManagementScreenState
 
     String name = exercise?.name ?? '';
     MuscleGroup? selectedMuscleGroup;
-    ExerciseTrackingType trackingType =
-        exercise?.trackingType ?? ExerciseTrackingType.weightReps;
+    ExerciseTrackingType? trackingType = exercise?.trackingType;
     if (exercise != null) {
       selectedMuscleGroup = muscleGroups.firstWhere(
         (muscleGroup) => muscleGroup.id == exercise.muscleGroupId,
@@ -387,7 +386,7 @@ class _ExerciseManagementScreenState
             Future<void> saveExercise() async {
               var didClose = false;
               final trimmedName = name.trim();
-              if (trimmedName.isEmpty || selectedMuscleGroup == null) {
+              if (trimmedName.isEmpty || selectedMuscleGroup == null || trackingType == null) {
                 return;
               }
 
@@ -402,7 +401,7 @@ class _ExerciseManagementScreenState
                 name: trimmedName,
                 muscleGroupId: selectedMuscleGroup!.id!,
                 isCustom: exercise?.isCustom ?? true,
-                trackingType: trackingType,
+                trackingType: trackingType!,
               );
 
               try {
@@ -714,7 +713,8 @@ class _ExerciseManagementScreenState
                               onPressed:
                                   (!isSaving &&
                                       name.trim().isNotEmpty &&
-                                      selectedMuscleGroup != null)
+                                      selectedMuscleGroup != null &&
+                                      trackingType != null)
                                   ? saveExercise
                                   : null,
                               child: Text(exercise == null ? 'Save' : 'Update'),

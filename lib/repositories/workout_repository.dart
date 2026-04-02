@@ -256,6 +256,7 @@ class WorkoutRepository {
       '''
       SELECT 
         w.date as workout_date, 
+        e.id as exercise_id,
         e.name as exercise_name, 
         e.trackingType as tracking_type,
         s.weight as set_weight, 
@@ -279,6 +280,7 @@ class WorkoutRepository {
       '''
       SELECT 
         w.date as workout_date, 
+        e.id as exercise_id,
         e.name as exercise_name, 
         e.trackingType as tracking_type,
         s.weight as set_weight, 

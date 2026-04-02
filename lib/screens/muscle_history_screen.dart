@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/muscle_group.dart';
 import '../providers/exercise_provider.dart';
@@ -10,6 +11,8 @@ import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
 import '../widgets/selection_sheet.dart';
 import '../widgets/glass_app_bar.dart';
+import '../providers/workout_actions_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class MuscleHistoryScreen extends ConsumerStatefulWidget {
   final int muscleGroupId;
@@ -21,6 +24,8 @@ class MuscleHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
+  static const _historyTipPrefKey = 'muscle_history_tip_hidden';
+  bool _showHistoryTip = true;
   int _selectedMuscleGroupId = 1;
   final DateFormat _historyDateFormat = DateFormat('EEE, dd MMM yyyy');
   final NumberFormat _weightFormat = NumberFormat('0.##');
@@ -48,6 +53,27 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
   void initState() {
     super.initState();
     _selectedMuscleGroupId = widget.muscleGroupId;
+    _loadTipPreference();
+  }
+
+  Future<void> _loadTipPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isHidden = prefs.getBool(_historyTipPrefKey) ?? false;
+    if (mounted) {
+      setState(() {
+        _showHistoryTip = !isHidden;
+      });
+    }
+  }
+
+  Future<void> _dismissHistoryTip() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_historyTipPrefKey, true);
+    if (mounted) {
+      setState(() {
+        _showHistoryTip = false;
+      });
+    }
   }
 
   @override
@@ -75,6 +101,11 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
                 child: Text('Unable to load muscle groups right now.'),
               ),
             ),
+            if (_showHistoryTip)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: _HistoryTipBanner(onClose: _dismissHistoryTip),
+              ),
             Expanded(
               child: historyAsync.when(
                 data: (history) => _buildHistoryContent(history, isAscending: isAscending),
@@ -194,6 +225,8 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
       (count, exerciseMap) => count + exerciseMap.length,
     );
 
+    final showTip = _showHistoryTip;
+
     return ListView.builder(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -212,7 +245,8 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
           );
         }
 
-        final date = dates[index - 1];
+        final dateIndex = index - 1;
+        final date = dates[dateIndex];
         final exercises = grouped[date]!;
         final parsedDate = DateTime.tryParse(date);
         final displayDate = parsedDate == null
@@ -255,6 +289,20 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
                       ],
                     ),
                   ),
+                  IconButton(
+                    onPressed: () async {
+                      final exerciseIds = exercises.values
+                          .map((sets) => (sets.first['exercise_id'] as num).toInt())
+                          .toList();
+                      await ref.read(workoutActionsProvider).copySessionToToday(exerciseIds);
+                      if (context.mounted) {
+                        final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                        context.push('/workout/$today');
+                      }
+                    },
+                    icon: const Icon(Icons.content_copy_rounded, color: AppTheme.secondary, size: 20),
+                    tooltip: 'Copy all exercises to today',
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -289,6 +337,21 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
                               color: AppTheme.textMuted,
                               fontWeight: FontWeight.w600,
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () async {
+                              final exerciseId = (sets.first['exercise_id'] as num).toInt();
+                              await ref.read(workoutActionsProvider).copyExerciseToToday(exerciseId);
+                              if (context.mounted) {
+                                final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                                context.push('/workout/$today');
+                              }
+                            },
+                            icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary, size: 20),
+                            tooltip: 'Add to today\'s workout',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -387,6 +450,83 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
   }
 }
 
+class _HistoryTipBanner extends StatelessWidget {
+  final VoidCallback onClose;
+
+  const _HistoryTipBanner({required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.lightbulb_outline_rounded,
+              color: AppTheme.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quick Tip:',
+                  style: TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Quickly build your workout from history:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const _TipItem(
+                  icon: Icons.content_copy_rounded,
+                  color: AppTheme.secondary,
+                  text: 'Copy all exercises from a previous session.',
+                ),
+                const SizedBox(height: 6),
+                const _TipItem(
+                  icon: Icons.add_circle_outline_rounded,
+                  color: AppTheme.primary,
+                  text: 'Add a single exercise to today\'s log.',
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded, size: 18, color: AppTheme.textMuted),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            tooltip: 'Dismiss tip',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 class _HistoryHero extends StatelessWidget {
   final int days;
   final int exercises;
@@ -480,6 +620,38 @@ class _HistoryMetric extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+class _TipItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _TipItem({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
