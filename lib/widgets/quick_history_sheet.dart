@@ -137,7 +137,7 @@ class QuickHistorySheet extends ConsumerWidget {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('View Full Muscle History'),
+                Text('View Full Workout History'),
                 SizedBox(width: 8),
                 Icon(Icons.arrow_forward_rounded, size: 18),
               ],

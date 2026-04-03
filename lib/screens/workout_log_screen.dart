@@ -160,8 +160,15 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
                     context.push('/add-exercise/date/${widget.date}');
                   }
                 },
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Exercise'),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded, size: 18),
+                ),
+                label: const Text('Add New Exercise'),
               ),
             ],
           ),
@@ -210,14 +217,19 @@ class _WorkoutLogScreenState extends ConsumerState<WorkoutLogScreen> {
               setCount: stats['setCount'] ?? 0,
             ),
             const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  context.push('/add-exercise/$workoutId');
-                },
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Exercise'),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.push('/add-exercise/$workoutId');
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add_rounded, size: 18),
               ),
+              label: const Text('Add New Exercise'),
             ),
             const SizedBox(height: 14),
             if (exercises.isEmpty)
@@ -330,7 +342,7 @@ class _WorkoutBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceElevated.withValues(alpha: 0.86),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppTheme.outline),
       ),
@@ -338,7 +350,7 @@ class _WorkoutBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: AppTheme.secondary),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             label,
             style: const TextStyle(
@@ -348,8 +360,8 @@ class _WorkoutBadge extends StatelessWidget {
           ),
           if (secondaryIcon != null && secondaryLabel != null) ...[
             const SizedBox(width: 16),
-            Icon(secondaryIcon, size: 16, color: AppTheme.secondary),
-            const SizedBox(width: 6),
+            Icon(secondaryIcon!, size: 16, color: AppTheme.primary),
+            const SizedBox(width: 8),
             Text(
               secondaryLabel!,
               style: const TextStyle(
@@ -503,6 +515,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
 
   void _invalidateSetData() {
     ref.invalidate(workoutSetsProvider(widget.workoutExercise.id!));
+    ref.invalidate(workoutStatsProvider(widget.workoutExercise.workoutId));
     ref.invalidate(muscleHistoryProvider);
     ref.invalidate(allWorkoutsProvider);
   }
@@ -771,15 +784,19 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
               ),
               Opacity(
                 opacity: hasHistory ? 1.0 : 0.35,
-                child: IconButton.filled(
+                child: IconButton(
                   style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.secondary.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.secondary.withValues(alpha: 0.12),
                     foregroundColor: AppTheme.secondary,
+                    padding: const EdgeInsets.all(10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     side: BorderSide(
-                      color: AppTheme.secondary.withValues(alpha: 0.3),
+                      color: AppTheme.secondary.withValues(alpha: 0.25),
                     ),
                   ),
-                  icon: const Icon(Icons.history_rounded),
+                  icon: const Icon(Icons.history_rounded, size: 22),
                   onPressed: hasHistory
                       ? () {
                           final muscleId = allExercisesAsync.value
@@ -832,6 +849,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                   ref.invalidate(
                     workoutExercisesProvider(widget.workoutExercise.workoutId),
                   );
+                  ref.invalidate(workoutStatsProvider(widget.workoutExercise.workoutId));
                   ref.invalidate(workoutByDateProvider(widget.date));
                   ref.invalidate(allWorkoutsProvider);
                   ref.invalidate(muscleHistoryProvider);
@@ -918,15 +936,18 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
               final addSetRow = isDuration
                   ? _AddDurationSetRow(
                       workoutExerciseId: widget.workoutExercise.id!,
+                      workoutId: widget.workoutExercise.workoutId,
                       nextSetIndex: visibleSets.length + 1,
                     )
                   : isRepsOnly
                   ? _AddRepsSetRow(
                       workoutExerciseId: widget.workoutExercise.id!,
+                      workoutId: widget.workoutExercise.workoutId,
                       nextSetIndex: visibleSets.length + 1,
                     )
                   : _AddSetRow(
                       workoutExerciseId: widget.workoutExercise.id!,
+                      workoutId: widget.workoutExercise.workoutId,
                       nextSetIndex: visibleSets.length + 1,
                     );
 
@@ -1266,7 +1287,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
               },
               icon: Icon(
                 _isEditing ? Icons.check_rounded : Icons.edit_outlined,
-                color: _isEditing ? AppTheme.primary : Colors.white70,
+                color: _isEditing ? const Color(0xFF4ADE80) : Colors.white70,
               ),
             ),
           ),
@@ -1289,7 +1310,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
       background: Container(
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withValues(alpha: 0.75),
+          color: const Color(0xFFEF5350).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(18),
         ),
         alignment: Alignment.centerRight,
@@ -1431,7 +1452,7 @@ class _RepsSetRowState extends ConsumerState<_RepsSetRow> {
               },
               icon: Icon(
                 _isEditing ? Icons.check_rounded : Icons.edit_outlined,
-                color: _isEditing ? AppTheme.primary : Colors.white70,
+                color: _isEditing ? const Color(0xFF4ADE80) : Colors.white70,
               ),
             ),
           ),
@@ -1454,7 +1475,7 @@ class _RepsSetRowState extends ConsumerState<_RepsSetRow> {
       background: Container(
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withValues(alpha: 0.75),
+          color: const Color(0xFFEF5350).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(18),
         ),
         alignment: Alignment.centerRight,
@@ -1653,7 +1674,7 @@ class _DurationSetRowState extends ConsumerState<_DurationSetRow> {
               },
               icon: Icon(
                 _isEditing ? Icons.check_rounded : Icons.edit_outlined,
-                color: _isEditing ? AppTheme.primary : Colors.white70,
+                color: _isEditing ? const Color(0xFF4ADE80) : Colors.white70,
               ),
             ),
           ),
@@ -1676,7 +1697,7 @@ class _DurationSetRowState extends ConsumerState<_DurationSetRow> {
       background: Container(
         margin: const EdgeInsets.symmetric(vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.redAccent.withValues(alpha: 0.75),
+          color: const Color(0xFFEF5350).withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(18),
         ),
         alignment: Alignment.centerRight,
@@ -1740,10 +1761,12 @@ Future<bool> _showDeleteConfirmation(
 
 class _AddSetRow extends ConsumerStatefulWidget {
   final int workoutExerciseId;
+  final int workoutId;
   final int nextSetIndex;
 
   const _AddSetRow({
     required this.workoutExerciseId,
+    required this.workoutId,
     required this.nextSetIndex,
   });
 
@@ -1753,10 +1776,12 @@ class _AddSetRow extends ConsumerStatefulWidget {
 
 class _AddRepsSetRow extends ConsumerStatefulWidget {
   final int workoutExerciseId;
+  final int workoutId;
   final int nextSetIndex;
 
   const _AddRepsSetRow({
     required this.workoutExerciseId,
+    required this.workoutId,
     required this.nextSetIndex,
   });
 
@@ -1766,10 +1791,12 @@ class _AddRepsSetRow extends ConsumerStatefulWidget {
 
 class _AddDurationSetRow extends ConsumerStatefulWidget {
   final int workoutExerciseId;
+  final int workoutId;
   final int nextSetIndex;
 
   const _AddDurationSetRow({
     required this.workoutExerciseId,
+    required this.workoutId,
     required this.nextSetIndex,
   });
 
@@ -1804,6 +1831,7 @@ class _AddDurationSetRowState extends ConsumerState<_AddDurationSetRow> {
     final repo = ref.read(workoutRepositoryProvider);
     await repo.addDurationSet(widget.workoutExerciseId, totalSeconds);
     ref.invalidate(workoutSetsProvider(widget.workoutExerciseId));
+    ref.invalidate(workoutStatsProvider(widget.workoutId));
     ref.invalidate(muscleHistoryProvider);
     ref.invalidate(allWorkoutsProvider);
     minutesController.clear();
@@ -1920,6 +1948,7 @@ class _AddRepsSetRowState extends ConsumerState<_AddRepsSetRow> {
     final repo = ref.read(workoutRepositoryProvider);
     await repo.addRepsSet(widget.workoutExerciseId, reps);
     ref.invalidate(workoutSetsProvider(widget.workoutExerciseId));
+    ref.invalidate(workoutStatsProvider(widget.workoutId));
     ref.invalidate(muscleHistoryProvider);
     ref.invalidate(allWorkoutsProvider);
     repsController.clear();
@@ -2029,6 +2058,7 @@ class _AddSetRowState extends ConsumerState<_AddSetRow> {
     final repo = ref.read(workoutRepositoryProvider);
     await repo.addSet(widget.workoutExerciseId, w, r);
     ref.invalidate(workoutSetsProvider(widget.workoutExerciseId));
+    ref.invalidate(workoutStatsProvider(widget.workoutId));
     ref.invalidate(muscleHistoryProvider);
     ref.invalidate(allWorkoutsProvider);
     weightController.clear();

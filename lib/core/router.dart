@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../screens/home_screen.dart';
 import '../screens/workout_log_screen.dart';
 import '../screens/add_exercise_screen.dart';
-import '../screens/muscle_history_screen.dart';
+import '../screens/workout_history_screen.dart';
 import '../screens/exercise_management_screen.dart';
 import '../screens/privacy_screen.dart';
 import '../screens/settings_screen.dart';
@@ -12,6 +12,7 @@ import '../screens/reports_screen.dart';
 import '../screens/progress_gallery_screen.dart';
 import '../screens/comparison_screen.dart';
 import '../screens/photo_view_screen.dart';
+import '../screens/camera_screen.dart';
 import '../models/progress_photo.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -43,7 +44,7 @@ final GoRouter appRouter = GoRouter(
       path: '/history/:muscleGroupId',
       builder: (context, state) {
         final id = int.parse(state.pathParameters['muscleGroupId']!);
-        return MuscleHistoryScreen(muscleGroupId: id);
+        return WorkoutHistoryScreen(muscleGroupId: id);
       },
     ),
     GoRoute(
@@ -97,6 +98,10 @@ final GoRouter appRouter = GoRouter(
         final initialIndex = extras['initialIndex'] as int;
         return PhotoViewScreen(photos: photos, initialIndex: initialIndex);
       },
+    ),
+    GoRoute(
+      path: '/progress/camera',
+      builder: (context, state) => const CameraScreen(),
     ),
   ],
 );

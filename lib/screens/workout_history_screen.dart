@@ -14,17 +14,17 @@ import '../widgets/glass_app_bar.dart';
 import '../providers/workout_actions_provider.dart';
 import 'package:go_router/go_router.dart';
 
-class MuscleHistoryScreen extends ConsumerStatefulWidget {
+class WorkoutHistoryScreen extends ConsumerStatefulWidget {
   final int muscleGroupId;
-  const MuscleHistoryScreen({super.key, required this.muscleGroupId});
+  const WorkoutHistoryScreen({super.key, required this.muscleGroupId});
 
   @override
-  ConsumerState<MuscleHistoryScreen> createState() =>
-      _MuscleHistoryScreenState();
+  ConsumerState<WorkoutHistoryScreen> createState() =>
+      _WorkoutHistoryScreenState();
 }
 
-class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
-  static const _historyTipPrefKey = 'muscle_history_tip_hidden';
+class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
+  static const _historyTipPrefKey = 'workout_history_tip_hidden';
   bool _showHistoryTip = true;
   int _selectedMuscleGroupId = 1;
   final DateFormat _historyDateFormat = DateFormat('EEE, dd MMM yyyy');
@@ -88,7 +88,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const GlassAppBar(title: Text('Muscle History')),
+      appBar: const GlassAppBar(title: Text('Workout History')),
       body: AppBackdrop(
         child: Column(
           children: [
@@ -191,7 +191,7 @@ class _MuscleHistoryScreenState extends ConsumerState<MuscleHistoryScreen> {
                 ),
                 SizedBox(height: 14),
                 Text(
-                  'No muscle history yet',
+                  'No workout history yet',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                   textAlign: TextAlign.center,
                 ),

@@ -53,7 +53,14 @@ class _ExerciseManagementScreenState
               ElevatedButton.icon(
                 onPressed: () =>
                     _openExerciseEditor(muscleGroups: muscleGroups),
-                icon: const Icon(Icons.add_rounded),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded, size: 18),
+                ),
                 label: const Text('Add New Exercise'),
               ),
               const SizedBox(height: 18),
@@ -114,8 +121,11 @@ class _ExerciseManagementScreenState
                   _searchQuery = value.trim().toLowerCase();
                 });
               },
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search_rounded),
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: const Color(0xFF7C4DFF).withValues(alpha: 0.7), // Indigo
+                ),
                 hintText: 'Search exercises by name',
               ),
             ),
@@ -577,11 +587,9 @@ class _ExerciseManagementScreenState
                             avatar: Icon(
                               Icons.fitness_center_rounded,
                               size: 18,
-                              color:
-                                  trackingType ==
-                                      ExerciseTrackingType.weightReps
+                              color: trackingType == ExerciseTrackingType.weightReps
                                   ? Colors.white
-                                  : Colors.white70,
+                                  : const Color(0xFF7C4DFF), // Indigo
                             ),
                             label: Text(
                               ExerciseTrackingType.weightReps.displayLabel,
@@ -589,14 +597,14 @@ class _ExerciseManagementScreenState
                             showCheckmark: false,
                             selected:
                                 trackingType == ExerciseTrackingType.weightReps,
-                            selectedColor: AppTheme.primary,
+                            selectedColor: const Color(0xFF7C4DFF),
                             backgroundColor: AppTheme.surfaceElevated
                                 .withValues(alpha: 0.92),
                             side: BorderSide(
                               color:
                                   trackingType ==
                                       ExerciseTrackingType.weightReps
-                                  ? AppTheme.primary
+                                  ? const Color(0xFF7C4DFF)
                                   : AppTheme.outline,
                             ),
                             labelStyle: TextStyle(

@@ -23,6 +23,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.grid_view_rounded,
                     label: 'Dashboard',
+                    iconColor: AppTheme.primary,
                     onTap: () {
                       Navigator.pop(context);
                       context.go('/');
@@ -31,6 +32,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.monitor_heart_outlined,
                     label: 'Health Insights',
+                    iconColor: AppTheme.secondary,
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/reports');
@@ -39,6 +41,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.monitor_weight_outlined,
                     label: 'Weight Progress',
+                    iconColor: AppTheme.tertiary,
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/bodyweight');
@@ -47,6 +50,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.camera_alt_rounded,
                     label: 'My Progress',
+                    iconColor: const Color(0xFFFFD600), // Sun Yellow
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/progress');
@@ -58,7 +62,8 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   _DrawerTile(
                     icon: Icons.query_stats_rounded,
-                    label: 'Muscle History',
+                    label: 'Workout History',
+                    iconColor: const Color(0xFFFFB300), // Amber
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/history/1');
@@ -67,6 +72,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.fitness_center_rounded,
                     label: 'Manage Exercises',
+                    iconColor: const Color(0xFF7C4DFF), // Indigo
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/manage-exercises');
@@ -79,6 +85,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.person_outline_rounded,
                     label: 'Profile',
+                    iconColor: const Color(0xFF00E676), // Emerald Green
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/profile');
@@ -87,6 +94,7 @@ class AppDrawer extends ConsumerWidget {
                   _DrawerTile(
                     icon: Icons.settings_rounded,
                     label: 'Settings',
+                    iconColor: const Color(0xFF78909C), // Blue Grey
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/settings');
@@ -205,11 +213,13 @@ class _DrawerHeader extends ConsumerWidget {
 class _DrawerTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Color? iconColor;
   final VoidCallback onTap;
 
   const _DrawerTile({
     required this.icon,
     required this.label,
+    this.iconColor,
     required this.onTap,
   });
 
@@ -220,7 +230,7 @@ class _DrawerTile extends StatelessWidget {
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         tileColor: AppTheme.surface.withValues(alpha: 0.75),
-        leading: Icon(icon, color: AppTheme.primary),
+        leading: Icon(icon, color: iconColor ?? AppTheme.primary),
         title: Text(label),
         onTap: onTap,
       ),

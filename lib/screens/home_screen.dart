@@ -348,14 +348,14 @@ class _HeroPanel extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           const Positioned(
-            top: -32,
-            left: -18,
-            child: _HeroGlow(size: 160, color: Color(0x2B17E7B1)),
+            top: -40,
+            left: -20,
+            child: _HeroGlow(size: 180, color: Color(0x1F17E7B1)),
           ),
           const Positioned(
-            right: -28,
-            bottom: -46,
-            child: _HeroGlow(size: 210, color: Color(0x30FF8C24)),
+            right: -30,
+            bottom: -50,
+            child: _HeroGlow(size: 220, color: Color(0x22FF8C24)),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,17 +537,24 @@ class _PressableCtaButtonState extends State<_PressableCtaButton> {
             boxShadow: [
               BoxShadow(
                 color: AppTheme.primary.withValues(
-                  alpha: _pressed ? 0.18 : 0.28,
+                  alpha: _pressed ? 0.22 : 0.35,
                 ),
-                blurRadius: _pressed ? 18 : 26,
-                spreadRadius: _pressed ? 0 : 1,
-                offset: Offset(0, _pressed ? 8 : 12),
+                blurRadius: _pressed ? 20 : 32,
+                spreadRadius: _pressed ? 0 : 2,
+                offset: Offset(0, _pressed ? 8 : 14),
               ),
             ],
           ),
           child: ElevatedButton.icon(
             onPressed: widget.onPressed,
-            icon: const Icon(Icons.bolt_rounded),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.bolt_rounded, size: 20),
+            ),
             label: const Text('Start Today\'s Workout'),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(58),
@@ -774,12 +781,20 @@ class _TipBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 2),
-            child: Icon(
-              Icons.lightbulb_outline_rounded,
-              color: AppTheme.primary,
-              size: 20,
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+              ),
+              child: const Icon(
+                Icons.lightbulb_outline_rounded,
+                color: AppTheme.primary,
+                size: 18,
+              ),
             ),
           ),
           const SizedBox(width: 12),

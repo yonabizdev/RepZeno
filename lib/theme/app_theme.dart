@@ -18,7 +18,7 @@ class AppTheme {
 
   static ThemeData get darkTheme {
     final base = ThemeData.dark(useMaterial3: true);
-    final textTheme = GoogleFonts.spaceGroteskTextTheme(
+    final textTheme = GoogleFonts.interTextTheme(
       base.textTheme,
     ).apply(bodyColor: Colors.white, displayColor: Colors.white);
 

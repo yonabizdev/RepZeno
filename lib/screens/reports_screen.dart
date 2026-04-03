@@ -109,8 +109,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.analytics_outlined, size: 80, color: AppTheme.primary),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.secondary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.analytics_outlined, size: 64, color: AppTheme.secondary),
+            ),
             const Text(
               'Not Enough Data',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -294,10 +300,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceMuted,
+                  color: AppTheme.secondary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.show_chart_rounded, color: AppTheme.primary, size: 20),
+                child: const Icon(Icons.show_chart_rounded, color: AppTheme.secondary, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -518,6 +524,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           value: '${ibw.toStringAsFixed(1)} kg',
           subtitle: 'Devine standard projection',
           icon: Icons.adjust_rounded,
+          iconColor: const Color(0xFF00E676), // Emerald for target
           infoTitle: 'Ideal Body Weight (IBW)',
           infoContent: 'The Devine Formula (1974) calculates a statistically healthy target weight based strictly on your height and biological gender. It serves as an excellent baseline goal if you are looking to trim down to standard athletic proportions.',
         ),
@@ -527,6 +534,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           value: bmi.toStringAsFixed(1),
           subtitle: _getBmiStatus(bmi),
           icon: Icons.monitor_weight_outlined,
+          iconColor: AppTheme.secondary,
           infoTitle: 'About BMI',
           infoContent: 'Body Mass Index is a simple medical ratio of your weight-to-height. Underweight is < 18.5, Normal is 18.5-24.9, Overweight is 25-29.9, and Obese is 30+. Note: This formula does not account for heavy muscle mass.',
         ),
@@ -536,6 +544,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           value: '${bmr.round()} kcal',
           subtitle: 'Calories burned at complete rest',
           icon: Icons.local_fire_department_outlined,
+          iconColor: Colors.orangeAccent,
           infoTitle: 'About BMR',
           infoContent: 'Your BMR represents the exact number of calories your body burns per day if you stayed in bed doing absolutely nothing. Calculated tightly for your age, gender, and weight using the Mifflin-St Jeor equation.',
         ),
@@ -545,6 +554,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           value: '${(bmr * 1.55).round()} kcal',
           subtitle: 'Maintenance calories for 3-5 workouts/wk',
           icon: Icons.bolt_rounded,
+          iconColor: Colors.amber,
           infoTitle: 'Total Daily Energy Expenditure',
           infoContent: 'TDEE is your BMR multiplied by an activity factor. If you work out moderately (3-5 times a week), eating this amount of calories will perfectly maintain your weight. Eat roughly 500 kcal less to lose fat, or 300 kcal more to build muscle.',
         ),
@@ -554,6 +564,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           value: '${(maxHr * 0.6).round()} - ${(maxHr * 0.7).round()} BPM',
           subtitle: 'Maximum safe HR is ${maxHr.round()} BPM',
           icon: Icons.favorite_border_rounded,
+          iconColor: const Color(0xFFFF5252), // Soft Red
           infoTitle: 'Target Heart Rate Zones',
           infoContent: 'Using the Tanaka medical formula, your estimated maximum heart rate was calculated based on your exact age. The fat burning zone displayed here represents 60-70% of your maximum target limits.',
         ),
@@ -573,6 +584,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     required String value,
     required String subtitle,
     required IconData icon,
+    required Color iconColor,
     required String infoTitle,
     required String infoContent,
   }) {
@@ -594,16 +606,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceMuted,
+                      color: iconColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(icon, color: AppTheme.primary, size: 24),
+                    child: Icon(icon, color: iconColor, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(fontSize: 14, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontSize: 14, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -616,7 +633,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 12, color: AppTheme.primary),
+                style: TextStyle(fontSize: 12, color: iconColor),
               ),
             ],
           ),

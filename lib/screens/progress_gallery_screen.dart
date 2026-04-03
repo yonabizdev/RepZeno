@@ -116,12 +116,7 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
           }
         }
       } else {
-        final XFile? image = await _picker.pickImage(
-          source: source,
-          maxWidth: 1080,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
+        final XFile? image = await context.push<XFile?>('/progress/camera');
 
         if (image != null && mounted) {
           final repository = ref.read(progressPhotoRepositoryProvider);
@@ -164,7 +159,14 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primary),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: AppTheme.primary),
+                ),
                 title: const Text('Take a photo'),
                 onTap: () {
                   Navigator.pop(context);
@@ -172,8 +174,15 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primary),
-                title: const Text('Choose from library'),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4081).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Color(0xFFFF4081)),
+                ),
+                title: const Text('Pick from Gallery'),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -393,15 +402,22 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(30),
               onTap: _startComparison,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.compare_arrows_rounded, color: Colors.white, size: 24),
-                    SizedBox(width: 8),
-                    Text(
-                      'Compare Now',
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.compare_arrows_rounded, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Compare Photos',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
@@ -437,7 +453,14 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.camera_alt_outlined, size: 60, color: AppTheme.textMuted),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF4081).withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.camera_alt_outlined, size: 60, color: Color(0xFFFF4081)),
+          ),
             const SizedBox(height: 16),
             const Text(
               'No Transformation Photos',
@@ -578,10 +601,10 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 0.8,
                 ),
                 itemCount: entry.value.length,
                 itemBuilder: (context, index) {

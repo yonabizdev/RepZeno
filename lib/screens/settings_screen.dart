@@ -319,7 +319,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   builder: (context, ref, child) {
                     final isAscending = ref.watch(sortSetsAscendingProvider);
                     return ListTile(
-                      leading: const Icon(Icons.sort_rounded, color: AppTheme.primary),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.sort_rounded, color: Color(0xFF78909C), size: 20),
+                      ),
                       title: const Text('Set Sort Order'),
                       subtitle: Text(isAscending ? 'Oldest sets first' : 'Newest sets first'),
                       onTap: () => ref.read(sortSetsAscendingProvider.notifier).toggle(),
@@ -333,19 +340,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: 'Data & Backups',
               children: [
                 ListTile(
-                  leading: const Icon(Icons.upload_file_rounded, color: AppTheme.primary),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.upload_file_rounded, color: Color(0xFF78909C), size: 20),
+                  ),
                   title: const Text('Export Backup'),
                   subtitle: const Text('Save your workout history, profile, weight logs, and transformation photos.'),
                   onTap: () => _exportDatabase(),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.download_rounded, color: AppTheme.primary),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.download_rounded, color: Color(0xFF78909C), size: 20),
+                  ),
                   title: const Text('Import Backup'),
                   subtitle: const Text('Restore workouts, profile details, weight logs, and photos.'),
                   onTap: () => _importDatabase(),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined, color: AppTheme.primary),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF78909C), size: 20),
+                  ),
                   title: const Text('Privacy & Data'),
                   subtitle: const Text('Learn how RepZeno protects you.'),
                   onTap: () => context.push('/privacy'),
@@ -357,8 +385,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: 'Danger Zone',
               children: [
                 ListTile(
-                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
-                  title: const Text('Delete All Data', style: TextStyle(color: Colors.redAccent)),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF5350).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF5350), size: 20),
+                  ),
+                  title: const Text('Delete All Data', style: TextStyle(color: Color(0xFFEF5350))),
                   subtitle: const Text('Permanently wipe workouts, exercises, profile, weight logs, and transformation gallery.'),
                   onTap: _deleteAllData,
                 ),
