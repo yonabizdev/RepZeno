@@ -44,3 +44,23 @@ class TransformationTipNotifier extends Notifier<bool> {
 final transformationTipDismissedProvider = NotifierProvider<TransformationTipNotifier, bool>(() {
   return TransformationTipNotifier();
 });
+
+class CameraTipNotifier extends Notifier<bool> {
+  static const _key = 'camera_tip_dismissed';
+
+  @override
+  bool build() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? false;
+  }
+
+  void dismiss() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    state = true;
+    prefs.setBool(_key, true);
+  }
+}
+
+final cameraTipDismissedProvider = NotifierProvider<CameraTipNotifier, bool>(() {
+  return CameraTipNotifier();
+});

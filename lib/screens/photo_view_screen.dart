@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/progress_photo.dart';
 import '../providers/profile_provider.dart';
+import '../providers/progress_photo_provider.dart';
 import '../theme/app_theme.dart';
 
 class PhotoViewScreen extends ConsumerStatefulWidget {
@@ -25,13 +26,60 @@ class PhotoViewScreen extends ConsumerStatefulWidget {
 class _PhotoViewScreenState extends ConsumerState<PhotoViewScreen> {
   late PageController _pageController;
   late int _currentIndex;
+  late List<ProgressPhoto> _mutablePhotos;
   bool _showWeight = true;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _mutablePhotos = List.from(widget.photos);
     _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  Future<void> _deleteCurrentPhoto() async {
+    final photo = _mutablePhotos[_currentIndex];
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Photo?'),
+        content: const Text('Are you sure you want to delete this photo? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      // Delete from database and file system
+      await ref.read(progressPhotosProvider.notifier).deletePhoto(photo);
+      
+      setState(() {
+        _mutablePhotos.removeAt(_currentIndex);
+        if (_mutablePhotos.isEmpty) {
+          context.pop(); // Go back if empty
+        } else {
+          // Adjust index if we deleted the last item
+          if (_currentIndex >= _mutablePhotos.length) {
+            _currentIndex = _mutablePhotos.length - 1;
+            // The PageView should automatically update, but we can jump if needed.
+            // Using a post frame callback to let PageView rebuild with new item count first.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(_currentIndex);
+              }
+            });
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -58,16 +106,21 @@ class _PhotoViewScreenState extends ConsumerState<PhotoViewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              DateFormat('MMMM dd, yyyy').format(DateTime.parse(widget.photos[_currentIndex].date)),
+              DateFormat('MMMM dd, yyyy').format(DateTime.parse(_mutablePhotos[_currentIndex].date)),
               style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             Text(
-              '${_currentIndex + 1} of ${widget.photos.length}',
+              '${_currentIndex + 1} of ${_mutablePhotos.length}',
               style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+            onPressed: _deleteCurrentPhoto,
+            tooltip: 'Delete Photo',
+          ),
           IconButton(
             icon: Icon(
               _showWeight ? Icons.visibility_rounded : Icons.visibility_off_rounded,
@@ -81,14 +134,14 @@ class _PhotoViewScreenState extends ConsumerState<PhotoViewScreen> {
       ),
       body: PageView.builder(
         controller: _pageController,
-        itemCount: widget.photos.length,
+        itemCount: _mutablePhotos.length,
         onPageChanged: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
         itemBuilder: (context, index) {
-          final photo = widget.photos[index];
+          final photo = _mutablePhotos[index];
           
           // Find matching weight for this date
           double? weight;

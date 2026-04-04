@@ -789,9 +789,7 @@ class _ExerciseCardState extends ConsumerState<_ExerciseCard> {
                     backgroundColor: AppTheme.secondary.withValues(alpha: 0.12),
                     foregroundColor: AppTheme.secondary,
                     padding: const EdgeInsets.all(10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    shape: const CircleBorder(),
                     side: BorderSide(
                       color: AppTheme.secondary.withValues(alpha: 0.25),
                     ),

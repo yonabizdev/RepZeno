@@ -61,9 +61,9 @@ class _ProgressGalleryScreenState extends ConsumerState<ProgressGalleryScreen> {
 
       if (source == ImageSource.gallery) {
         final List<XFile> images = await _picker.pickMultiImage(
-          maxWidth: 1080,
-          maxHeight: 1080,
-          imageQuality: 85,
+          maxWidth: 1920,
+          maxHeight: 1920,
+          imageQuality: 95,
         );
 
         if (images.length > 15) {
@@ -682,29 +682,7 @@ class _PhotoCard extends StatelessWidget {
               child: const Icon(Icons.broken_image_rounded, color: AppTheme.textMuted),
             ),
           ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black87, Colors.transparent],
-                ),
-              ),
-              child: Text(
-                DateFormat('MMM dd, yyyy').format(DateTime.parse(photo.date)),
-                style: const TextStyle(
-                  color: Colors.white, 
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
