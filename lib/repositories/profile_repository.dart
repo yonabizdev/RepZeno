@@ -1,4 +1,4 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../database/database_helper.dart';
 import '../models/user_profile.dart';
 import '../models/weight_log.dart';

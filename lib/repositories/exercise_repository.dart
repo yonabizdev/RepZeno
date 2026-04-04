@@ -2,7 +2,7 @@ import '../database/database_helper.dart';
 import '../models/muscle_group.dart';
 import '../models/exercise.dart';
 import '../models/exercise_tracking_type.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 class DuplicateExerciseException implements Exception {
   final String message;

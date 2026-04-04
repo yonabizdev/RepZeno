@@ -73,18 +73,6 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
           error: (e, st) => Center(child: Text('Error: $e')),
         ),
       ),
-      bottomNavigationBar: Container(
-        color: AppTheme.background,
-        child: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: ElevatedButton(
-            onPressed: _selectedExercise == null
-                ? null
-                : () async => _addExerciseToWorkout(_selectedExercise!),
-            child: const Text('Add to Workout'),
-          ),
-        ),
-      ),
     );
   }
 
@@ -171,6 +159,21 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _selectedExercise == null
+                    ? null
+                    : () async => _addExerciseToWorkout(_selectedExercise!),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded, size: 18),
+                ),
+                label: const Text('Add to Workout'),
+              ),
             ],
           ),
         ),
@@ -218,16 +221,16 @@ class _AddExerciseScreenState extends ConsumerState<AddExerciseScreen> {
     MuscleGroup muscleGroup,
   ) async {
     Exercise? createdExercise;
+    String name = '';
+    bool isSaving = false;
+    String? errorText;
+    ExerciseTrackingType? trackingType;
 
     createdExercise = await showModalBottomSheet<Exercise>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        String name = '';
-        bool isSaving = false;
-        String? errorText;
-        ExerciseTrackingType? trackingType;
         final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
 
         return Padding(

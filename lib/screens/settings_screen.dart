@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' as sql;
 import 'package:archive/archive_io.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_backdrop.dart';
@@ -30,27 +30,44 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isImporting = false;
+  bool _isExporting = false;
+  bool _isDeleting = false;
 
+  bool get _isLoading => _isImporting || _isExporting || _isDeleting;
+  
   Future<void> _exportDatabase() async {
     if (kIsWeb) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backups are not supported on the Web version.')));
       return;
     }
+    if (_isExporting) return;
+    setState(() => _isExporting = true);
+    
     try {
       final docsDir = await getApplicationDocumentsDirectory();
-      final dbPath = join(docsDir.path, 'repzeno.db');
-      final file = File(dbPath);
+      final tempDir = await getTemporaryDirectory();
+      final plaintextDbPath = join(tempDir.path, 'export_temp.db');
       
-      if (await file.exists()) {
+      // Delete any existing temp export file first
+      final oldTempFile = File(plaintextDbPath);
+      if (await oldTempFile.exists()) await oldTempFile.delete();
+      
+      // 1. Create a decrypted clone of the database for portability
+      await DatabaseHelper.instance.exportDecryptedDatabase(plaintextDbPath);
+      final decryptedFile = File(plaintextDbPath);
+
+      if (await decryptedFile.exists()) {
         final timestamp = DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now());
-        final tempDir = await getTemporaryDirectory();
         
-        // Create an archive containing the DB and all progress photos
+        // Create an archive containing the decrypted DB and all progress photos
         final archive = Archive();
         
-        // 1. Add DB file
-        final dbBytes = await file.readAsBytes();
+        // 1. Add DB file (as "repzeno.db" for legacy & merge simplicity inside zip)
+        final dbBytes = await decryptedFile.readAsBytes();
         archive.addFile(ArchiveFile('repzeno.db', dbBytes.length, dbBytes));
+        
+        // Cleanup temp file after reading
+        await decryptedFile.delete();
         
         // 2. Add Photos directory if exists
         final photosDir = Directory(join(docsDir.path, 'progress_photos'));
@@ -59,7 +76,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           for (final entity in entities) {
             if (entity is File) {
               final bytes = await entity.readAsBytes();
-              // Store as progress_photos/filename.ext in zip
               final name = join('progress_photos', basename(entity.path));
               archive.addFile(ArchiveFile(name, bytes.length, bytes));
             }
@@ -91,6 +107,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
       }
     }
   }
@@ -137,7 +157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               await outFile.parent.create(recursive: true);
               await outFile.writeAsBytes(data);
 
-              if (filename == 'repzeno.db') {
+              if (filename == 'repzeno_secure.db' || filename == 'repzeno.db') {
                 extractedDbPath = outFile.path;
               } else if (filename.startsWith('progress_photos/')) {
                 // Move photo to the app's progress_photos directory
@@ -151,7 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (extractedDbPath == null) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Invalid backup: repzeno.db not found in ZIP.')),
+                const SnackBar(content: Text('Invalid backup: No valid database file found in ZIP.')),
               );
             }
             return;
@@ -166,7 +186,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         // Validate structure by attempting to open it
         try {
-          final testDb = await openDatabase(dbToMergePath, readOnly: true);
+          final testDb = await sql.openDatabase(dbToMergePath, readOnly: true);
           final tables = await testDb.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
           final tableNames = tables.map((e) => e['name'] as String).toList();
           await testDb.close();
@@ -201,7 +221,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             builder: (ctx) => AlertDialog(
               backgroundColor: AppTheme.surface,
               title: const Text('Import Successful'),
-              content: const Text('Database restored! Your data has been instantly refreshed.'),
+              content: const Text('History and personal logs imported! Your data is updated and ready to use.'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -268,35 +288,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     ) ?? false;
 
-    if (!confirmed) return;
-    
-    // Safely close the active connection first
-    await DatabaseHelper.instance.closeAndReset();
-    
-    final docsDir = await getApplicationDocumentsDirectory();
-    final dbPath = join(docsDir.path, 'repzeno.db');
-    final file = File(dbPath);
-    if (await file.exists()) {
-      await file.delete();
+    if (!confirmed || _isDeleting) return;
+    setState(() => _isDeleting = true);
+
+    // Yield to the UI thread for a moment so the loading spinner actually paints.
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    try {
+      // Safely close the active connection first
+      await DatabaseHelper.instance.closeAndReset();
       
-      // Force Riverpod to clear UI caches
-      ref.invalidate(workoutRepositoryProvider);
-      ref.invalidate(exerciseRepositoryProvider);
-      ref.invalidate(profileRepositoryProvider);
-      ref.invalidate(allWorkoutsProvider);
-      ref.invalidate(workoutByDateProvider);
-      ref.invalidate(userProfileProvider);
-      ref.invalidate(weightLogsProvider);
-      ref.invalidate(progressPhotosProvider);
+      final docsDir = await getApplicationDocumentsDirectory();
+      
+      // List of possible DB files to clean up
+      final dbFiles = ['repzeno_secure.db', 'repzeno.db', 'repzeno_legacy.bak'];
+      
+      bool deletedAny = false;
+      for (final fileName in dbFiles) {
+        final file = File(join(docsDir.path, fileName));
+        if (await file.exists()) {
+          await file.delete();
+          deletedAny = true;
+        }
+      }
       
       // Also delete the progress_photos directory if it exists
       final photosDir = Directory(join(docsDir.path, 'progress_photos'));
       if (await photosDir.exists()) {
         await photosDir.delete(recursive: true);
+        deletedAny = true;
       }
-
+      
+      if (deletedAny) {
+        // Force Riverpod to clear UI caches
+        ref.invalidate(workoutRepositoryProvider);
+        ref.invalidate(exerciseRepositoryProvider);
+        ref.invalidate(profileRepositoryProvider);
+        ref.invalidate(allWorkoutsProvider);
+        ref.invalidate(workoutByDateProvider);
+        ref.invalidate(userProfileProvider);
+        ref.invalidate(weightLogsProvider);
+        ref.invalidate(progressPhotosProvider);
+        
+        // Let Riverpod and the UI settle while the spinner is still visible.
+        // This ensures the dashboard is effectively 'clean' before the user returns.
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppTheme.surface,
+              title: const Text('Data Deleted'),
+              content: const Text('All your personal data, logs, and photos have been removed successfully.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // Navigate only when user explicitly confirms they are ready
+                    Navigator.pop(ctx);
+                    context.go('/');
+                  },
+                  child: const Text('OK', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
       if (mounted) {
-        context.go('/');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Deletion failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
       }
     }
   }
@@ -308,99 +376,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: const GlassAppBar(title: Text('Settings')),
-      body: AppBackdrop(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
-          children: [
-            _SettingsSection(
-              title: 'Preferences',
+      body: Stack(
+        children: [
+          AppBackdrop(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 24),
               children: [
-                Consumer(
-                  builder: (context, ref, child) {
-                    final isAscending = ref.watch(sortSetsAscendingProvider);
-                    return ListTile(
+                _SettingsSection(
+                  title: 'Preferences',
+                  children: [
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final isAscending = ref.watch(sortSetsAscendingProvider);
+                        return ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.sort_rounded, color: Color(0xFF78909C), size: 20),
+                          ),
+                          title: const Text('Set Sort Order'),
+                          subtitle: Text(isAscending ? 'Oldest sets first' : 'Newest sets first'),
+                          onTap: () => ref.read(sortSetsAscendingProvider.notifier).toggle(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _SettingsSection(
+                  title: 'Data & Backups',
+                  children: [
+                    ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: const Color(0xFF78909C).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.sort_rounded, color: Color(0xFF78909C), size: 20),
+                        child: const Icon(Icons.upload_file_rounded, color: Color(0xFF78909C), size: 20),
                       ),
-                      title: const Text('Set Sort Order'),
-                      subtitle: Text(isAscending ? 'Oldest sets first' : 'Newest sets first'),
-                      onTap: () => ref.read(sortSetsAscendingProvider.notifier).toggle(),
-                    );
-                  },
+                      title: const Text('Export Backup'),
+                      subtitle: const Text('Save your workout history, profile, weight logs, and transformation photos.'),
+                      onTap: _isLoading ? null : () => _exportDatabase(),
+                    ),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.download_rounded, color: Color(0xFF78909C), size: 20),
+                      ),
+                      title: const Text('Import Backup'),
+                      subtitle: const Text('Restore workouts, profile details, weight logs, and photos.'),
+                      onTap: _isLoading ? null : () => _importDatabase(),
+                    ),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF78909C).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF78909C), size: 20),
+                      ),
+                      title: const Text('Privacy & Data'),
+                      subtitle: const Text('Learn how RepZeno protects you.'),
+                      onTap: () => context.push('/privacy'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _SettingsSection(
+                  title: 'Danger Zone',
+                  children: [
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF5350).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF5350), size: 20),
+                      ),
+                      title: const Text('Delete All Data', style: TextStyle(color: Color(0xFFEF5350))),
+                      subtitle: const Text('Permanently wipe workouts, exercises, profile, weight logs, and transformation gallery.'),
+                      onTap: _isLoading ? null : _deleteAllData,
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            _SettingsSection(
-              title: 'Data & Backups',
-              children: [
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.upload_file_rounded, color: Color(0xFF78909C), size: 20),
-                  ),
-                  title: const Text('Export Backup'),
-                  subtitle: const Text('Save your workout history, profile, weight logs, and transformation photos.'),
-                  onTap: () => _exportDatabase(),
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.download_rounded, color: Color(0xFF78909C), size: 20),
-                  ),
-                  title: const Text('Import Backup'),
-                  subtitle: const Text('Restore workouts, profile details, weight logs, and photos.'),
-                  onTap: () => _importDatabase(),
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF78909C).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.privacy_tip_outlined, color: Color(0xFF78909C), size: 20),
-                  ),
-                  title: const Text('Privacy & Data'),
-                  subtitle: const Text('Learn how RepZeno protects you.'),
-                  onTap: () => context.push('/privacy'),
-                ),
-              ],
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
             ),
-            const SizedBox(height: 20),
-            _SettingsSection(
-              title: 'Danger Zone',
-              children: [
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF5350).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF5350), size: 20),
-                  ),
-                  title: const Text('Delete All Data', style: TextStyle(color: Color(0xFFEF5350))),
-                  subtitle: const Text('Permanently wipe workouts, exercises, profile, weight logs, and transformation gallery.'),
-                  onTap: _deleteAllData,
-                ),
-              ],
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

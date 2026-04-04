@@ -225,7 +225,6 @@ class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
       (count, exerciseMap) => count + exerciseMap.length,
     );
 
-    final showTip = _showHistoryTip;
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(

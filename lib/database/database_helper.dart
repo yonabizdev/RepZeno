@@ -1,10 +1,10 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -142,9 +142,21 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  Future<String> getEncryptionKey() async {
+    const secureStorage = FlutterSecureStorage();
+    String? key = await secureStorage.read(key: 'db_encryption_key');
+    if (key == null) {
+      // Use a more robust generation scheme or UUID if available.
+      // For now, consistent with the existing logic but centralized.
+      key = 'sec_${DateTime.now().millisecondsSinceEpoch}_${(100000 + (DateTime.now().microsecondsSinceEpoch % 899999))}';
+      await secureStorage.write(key: 'db_encryption_key', value: key);
+    }
+    return key;
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('repzeno.db');
+    _database = await _initDB('repzeno_secure.db');
     return _database!;
   }
 
@@ -156,22 +168,36 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    if (kIsWeb) {
-      var factory = databaseFactoryFfiWeb;
-      return await factory.openDatabase(
-        filePath,
-        options: OpenDatabaseOptions(
-          version: _dbVersion,
-          onCreate: _createDB,
-          onUpgrade: _upgradeDB,
-        ),
-      );
-    }
-
+    final String password = await getEncryptionKey();
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, filePath);
+    
+    // Auto-Migrate from legacy plaintext DB to AES-256 Encrypted DB
+    final legacyPath = join(documentsDirectory.path, 'repzeno.db');
+    final legacyFile = File(legacyPath);
+    final secureFile = File(path);
+
+    if (await legacyFile.exists() && !await secureFile.exists()) {
+       debugPrint('🔐 Migrating plaintext DB to SQLCipher encrypted DB...');
+       try {
+         final legacyDb = await openDatabase(legacyPath);
+         await legacyDb.execute("ATTACH DATABASE '$path' AS encrypted KEY '$password'");
+         await legacyDb.rawQuery("SELECT sqlcipher_export('encrypted')");
+         await legacyDb.execute("DETACH DATABASE encrypted");
+         await legacyDb.close();
+       } catch (e) {
+         debugPrint('❌ Critical Migration Failure: $e');
+         // Fallback: If migration fails, we don't delete the legacy file
+         // so the user doesn't lose data, but we might need a manual recovery path.
+         rethrow;
+       }
+       
+       await legacyFile.rename(join(documentsDirectory.path, 'repzeno_legacy.bak'));
+    }
+
     final db = await openDatabase(
       path,
+      password: password,
       version: _dbVersion,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
@@ -546,15 +572,20 @@ class DatabaseHelper {
       throw Exception('Invalid or unsafe database import path detected.');
     }
     
-    // Attach the secondary database
+    // Attach the secondary database (KEY '' specifies it is an unencrypted legacy file)
     final safePath = importPath.replaceAll("'", "''");
-    await db.execute("ATTACH DATABASE '$safePath' AS importDb");
+    await db.execute("ATTACH DATABASE '$safePath' AS importDb KEY ''");
     
     try {
       // 1. Merge User Profile
       try {
         final localProfile = await db.query('user_profile', limit: 1);
-        final importProfile = await db.rawQuery('SELECT * FROM importDb.user_profile LIMIT 1').catchError((_) => <Map<String, dynamic>>[]);
+        
+        // Use a safe query to check if the database is actually readable
+        final importProfile = await db.rawQuery('SELECT * FROM importDb.user_profile LIMIT 1').catchError((e) {
+          debugPrint('Unable to read import database table: $e');
+          return <Map<String, dynamic>>[];
+        });
         
         if (importProfile.isNotEmpty) {
           final iProf = importProfile.first;
@@ -771,6 +802,23 @@ class DatabaseHelper {
       
     } finally {
       await db.execute('DETACH DATABASE importDb');
+    }
+  }
+
+  Future<void> exportDecryptedDatabase(String targetPath) async {
+    final db = await database;
+    // Attach the new plaintext database at targetPath
+    // KEY '' means the target is unencrypted
+    final safePath = targetPath.replaceAll("'", "''");
+    await db.execute("ATTACH DATABASE '$safePath' AS plaintext KEY ''");
+    
+    try {
+      // Export all schema and data to the plaintext database
+      // Use rawQuery as SELECT statements should not be run with execute() in some sqflite versions
+      await db.rawQuery("SELECT sqlcipher_export('plaintext')");
+    } finally {
+      // Always detach the database regardless of success
+      await db.execute("DETACH DATABASE plaintext");
     }
   }
 }

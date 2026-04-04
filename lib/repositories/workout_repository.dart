@@ -303,7 +303,9 @@ class WorkoutRepository {
     final results = await db.rawQuery(
       '''
       SELECT 
-        (SELECT COUNT(*) FROM workout_exercises WHERE workoutId = ?) as exerciseCount,
+        (SELECT COUNT(*) FROM workout_exercises we 
+         WHERE we.workoutId = ? 
+         AND EXISTS (SELECT 1 FROM workout_sets ws WHERE ws.workoutExerciseId = we.id)) as exerciseCount,
         (SELECT COUNT(*) FROM workout_sets ws 
          JOIN workout_exercises we ON ws.workoutExerciseId = we.id 
          WHERE we.workoutId = ?) as setCount

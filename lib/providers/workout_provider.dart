@@ -23,9 +23,9 @@ final allWorkoutsProvider = FutureProvider<List<Workout>>((ref) async {
 
 final workoutSetsProvider = FutureProvider.autoDispose
     .family<List<WorkoutSet>, int>((ref, workoutExerciseId) async {
-      final repo = ref.watch(workoutRepositoryProvider);
-      return repo.getSetsForWorkoutExercise(workoutExerciseId);
-    });
+  final repo = ref.watch(workoutRepositoryProvider);
+  return repo.getSetsForWorkoutExercise(workoutExerciseId);
+});
 
 final muscleHistoryProvider = FutureProvider.autoDispose
     .family<List<Map<String, dynamic>>, int>((ref, muscleGroupId) async {
