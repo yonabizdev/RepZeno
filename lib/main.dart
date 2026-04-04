@@ -9,6 +9,22 @@ import 'providers/settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Implemented robust global error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('🚨 [Flutter Error]: ${details.exceptionAsString()}');
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('💥 [Uncaught Async Error]: $error');
+    debugPrint(stack.toString());
+    return true; // Prevents app from hard crashing
+  };
+
+  // Immediate protection against memory leaks for extensive image galleries
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100 MB max limit
+
   if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
