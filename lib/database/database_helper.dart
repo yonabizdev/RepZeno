@@ -5,11 +5,14 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'dart:math' as math;
+import 'dart:convert';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
   static const _dbVersion = 9;
+  static const universalBackupKey = 'RepZeno_Global_Secure_Backup_k9X!2#zP8_v1';
   static const _storageProtectionChannel = MethodChannel(
     'com.repzeno.repzeno/storage',
   );
@@ -146,9 +149,10 @@ class DatabaseHelper {
     const secureStorage = FlutterSecureStorage();
     String? key = await secureStorage.read(key: 'db_encryption_key');
     if (key == null) {
-      // Use a more robust generation scheme or UUID if available.
-      // For now, consistent with the existing logic but centralized.
-      key = 'sec_${DateTime.now().millisecondsSinceEpoch}_${(100000 + (DateTime.now().microsecondsSinceEpoch % 899999))}';
+      // Use Cryptographically Secure PRNG for device-local active encryption
+      final secureRandom = math.Random.secure();
+      final values = List<int>.generate(32, (i) => secureRandom.nextInt(256));
+      key = base64UrlEncode(values);
       await secureStorage.write(key: 'db_encryption_key', value: key);
     }
     return key;
@@ -171,29 +175,6 @@ class DatabaseHelper {
     final String password = await getEncryptionKey();
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, filePath);
-    
-    // Auto-Migrate from legacy plaintext DB to AES-256 Encrypted DB
-    final legacyPath = join(documentsDirectory.path, 'repzeno.db');
-    final legacyFile = File(legacyPath);
-    final secureFile = File(path);
-
-    if (await legacyFile.exists() && !await secureFile.exists()) {
-       debugPrint('🔐 Migrating plaintext DB to SQLCipher encrypted DB...');
-       try {
-         final legacyDb = await openDatabase(legacyPath);
-         await legacyDb.execute("ATTACH DATABASE '$path' AS encrypted KEY '$password'");
-         await legacyDb.rawQuery("SELECT sqlcipher_export('encrypted')");
-         await legacyDb.execute("DETACH DATABASE encrypted");
-         await legacyDb.close();
-       } catch (e) {
-         debugPrint('❌ Critical Migration Failure: $e');
-         // Fallback: If migration fails, we don't delete the legacy file
-         // so the user doesn't lose data, but we might need a manual recovery path.
-         rethrow;
-       }
-       
-       await legacyFile.rename(join(documentsDirectory.path, 'repzeno_legacy.bak'));
-    }
 
     final db = await openDatabase(
       path,
@@ -572,9 +553,9 @@ class DatabaseHelper {
       throw Exception('Invalid or unsafe database import path detected.');
     }
     
-    // Attach the secondary database (KEY '' specifies it is an unencrypted legacy file)
+    // Attach the secondary database with the Universal Frictionless Key
     final safePath = importPath.replaceAll("'", "''");
-    await db.execute("ATTACH DATABASE '$safePath' AS importDb KEY ''");
+    await db.execute("ATTACH DATABASE '$safePath' AS importDb KEY '$universalBackupKey'");
     
     try {
       // 1. Merge User Profile
@@ -805,20 +786,18 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> exportDecryptedDatabase(String targetPath) async {
+  Future<void> exportFrictionlessBackup(String targetPath) async {
     final db = await database;
-    // Attach the new plaintext database at targetPath
-    // KEY '' means the target is unencrypted
+    // Attach the new target database using the internal Frictionless Key
     final safePath = targetPath.replaceAll("'", "''");
-    await db.execute("ATTACH DATABASE '$safePath' AS plaintext KEY ''");
+    await db.execute("ATTACH DATABASE '$safePath' AS exportedDb KEY '$universalBackupKey'");
     
     try {
-      // Export all schema and data to the plaintext database
-      // Use rawQuery as SELECT statements should not be run with execute() in some sqflite versions
-      await db.rawQuery("SELECT sqlcipher_export('plaintext')");
+      // Export all schema and data to the secure fallback database
+      await db.rawQuery("SELECT sqlcipher_export('exportedDb')");
     } finally {
       // Always detach the database regardless of success
-      await db.execute("DETACH DATABASE plaintext");
+      await db.execute("DETACH DATABASE exportedDb");
     }
   }
 }

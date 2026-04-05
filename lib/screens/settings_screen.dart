@@ -52,8 +52,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final oldTempFile = File(plaintextDbPath);
       if (await oldTempFile.exists()) await oldTempFile.delete();
       
-      // 1. Create a decrypted clone of the database for portability
-      await DatabaseHelper.instance.exportDecryptedDatabase(plaintextDbPath);
+      // 1. Create a frictionless encrypted clone of the database
+      await DatabaseHelper.instance.exportFrictionlessBackup(plaintextDbPath);
       final decryptedFile = File(plaintextDbPath);
 
       if (await decryptedFile.exists()) {
@@ -62,9 +62,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         // Create an archive containing the decrypted DB and all progress photos
         final archive = Archive();
         
-        // 1. Add DB file (as "repzeno.db" for legacy & merge simplicity inside zip)
+        // 1. Add DB file
         final dbBytes = await decryptedFile.readAsBytes();
-        archive.addFile(ArchiveFile('repzeno.db', dbBytes.length, dbBytes));
+        archive.addFile(ArchiveFile('repzeno_secure.db', dbBytes.length, dbBytes));
         
         // Cleanup temp file after reading
         await decryptedFile.delete();
@@ -157,7 +157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               await outFile.parent.create(recursive: true);
               await outFile.writeAsBytes(data);
 
-              if (filename == 'repzeno_secure.db' || filename == 'repzeno.db') {
+              if (filename == 'repzeno_secure.db') {
                 extractedDbPath = outFile.path;
               } else if (filename.startsWith('progress_photos/')) {
                 // Move photo to the app's progress_photos directory
@@ -186,7 +186,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         // Validate structure by attempting to open it
         try {
-          final testDb = await sql.openDatabase(dbToMergePath, readOnly: true);
+          final testDb = await sql.openDatabase(
+            dbToMergePath, 
+            password: DatabaseHelper.universalBackupKey, 
+            readOnly: true,
+          );
           final tables = await testDb.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
           final tableNames = tables.map((e) => e['name'] as String).toList();
           await testDb.close();
@@ -301,7 +305,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final docsDir = await getApplicationDocumentsDirectory();
       
       // List of possible DB files to clean up
-      final dbFiles = ['repzeno_secure.db', 'repzeno.db', 'repzeno_legacy.bak'];
+      final dbFiles = ['repzeno_secure.db'];
       
       bool deletedAny = false;
       for (final fileName in dbFiles) {

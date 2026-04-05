@@ -677,6 +677,7 @@ class _PhotoCard extends StatelessWidget {
           Image.file(
             File(photo.path),
             fit: BoxFit.cover,
+            cacheWidth: 400,
             errorBuilder: (context, error, stackTrace) => Container(
               color: AppTheme.surfaceMuted,
               child: const Icon(Icons.broken_image_rounded, color: AppTheme.textMuted),

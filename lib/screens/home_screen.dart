@@ -113,25 +113,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final workoutsAsync = ref.watch(allWorkoutsProvider);
-    final workouts = workoutsAsync.when(
-      data: (workouts) => workouts,
-      loading: () => const <Workout>[],
-      error: (_, stackTrace) => const <Workout>[],
-    );
-    final workoutCountByDate = <String, int>{};
     final topContentInset =
         MediaQuery.paddingOf(context).top + kToolbarHeight + 10;
-
-    for (final workout in workouts) {
-      workoutCountByDate.update(
-        workout.date,
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
-
-    final completedDayCount = workoutCountByDate.length;
     final todayKey = _dateKey(DateTime.now());
 
     final profileAsync = ref.watch(userProfileProvider);
@@ -153,9 +136,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       drawer: const AppDrawer(),
       body: AppBackdrop(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 28),
-          children: [
+        child: Consumer(
+          builder: (context, ref, child) {
+            final workoutsAsync = ref.watch(allWorkoutsProvider);
+            final workouts = workoutsAsync.when(
+              data: (workouts) => workouts,
+              loading: () => const <Workout>[],
+              error: (_, stackTrace) => const <Workout>[],
+            );
+            
+            final workoutCountByDate = <String, int>{};
+            for (final workout in workouts) {
+              workoutCountByDate.update(workout.date, (count) => count + 1, ifAbsent: () => 1);
+            }
+            final completedDayCount = workoutCountByDate.length;
+
+            return ListView(
+              padding: EdgeInsets.fromLTRB(16, topContentInset, 16, 28),
+              children: [
             if (_showDashboardTip) ...[
               _TipBanner(onClose: _dismissDashboardTip),
               const SizedBox(height: 16),
@@ -304,9 +302,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  ),
+);
   }
 }
 
